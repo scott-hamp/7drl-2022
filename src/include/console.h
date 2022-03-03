@@ -3,6 +3,7 @@
 
 #include <locale.h>
 #include <stdlib.h>
+#include <time.h>
 
 // BUILDINDEX = { 0: linux, 1: win64 }
 
@@ -28,6 +29,7 @@ typedef struct Console
 Console *Console_Create();
 void Console_Clear(Console *console);
 char Console_Getch(Console *console);
+void Console_Delay(Console *console, size_t ms);
 void Console_Destroy(Console *console);
 char *Console_GetString(Console *console, size_t size);
 void Console_Refresh(Console *console);

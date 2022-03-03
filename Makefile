@@ -1,6 +1,7 @@
 BUILD = linux
 # BUILD = { linux, win64 }
 # BUILDINDEX = { 0: linux, 1: win64 }
+RELEASE = 0
 
 WIN64 = x86_64-w64-mingw32
 
@@ -26,10 +27,14 @@ PROJECTNAME = 7drl-2022
 VERSION = 1
 APPNAMESELF = $(PROJECTNAME)_v$(VERSION)
 
-ifeq ($(BUILD),linux)
-	APPNAME = release/linux/$(APPNAMESELF)_linux
+ifeq ($(RELEASE),0)
+	APPNAME = debug/app
 else
-	APPNAME = release/win64/$(APPNAMESELF)_win64
+	ifeq ($(BUILD),linux)
+		APPNAME = release/linux/$(APPNAMESELF)_linux
+	else
+		APPNAME = release/win64/$(APPNAMESELF)_win64
+	endif
 endif
 
 EXT = .c
@@ -70,7 +75,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%$(EXT)
 # Cleans complete project
 .PHONY: clean
 clean:
-	$(RM) $(DELOBJ) $(DEP)
+	$(RM) $(DELOBJ) $(DEP) debug/app debug/app.exe
 
 # Cleans only all files with the extension .d
 .PHONY: cleandep

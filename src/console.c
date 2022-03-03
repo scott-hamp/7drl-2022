@@ -36,6 +36,13 @@ Console *Console_Create()
     return console;
 }
 
+void Console_Delay(Console *console, size_t ms)
+{
+    double start = (double)clock() / (double)(CLOCKS_PER_SEC / 1000);
+
+    while ((double)clock() / (double)(CLOCKS_PER_SEC / 1000) < start + (double)ms);
+}
+
 void Console_Destroy(Console *console)
 {
     delwin(console->window);
