@@ -22,7 +22,16 @@ else
 	LDFLAGS = -lpdcurses
 endif
 
-APPNAME = app
+PROJECTNAME = 7drl-2022
+VERSION = 1
+APPNAMESELF = $(PROJECTNAME)_v$(VERSION)
+
+ifeq ($(BUILD),linux)
+	APPNAME = release/linux/$(APPNAMESELF)_linux
+else
+	APPNAME = release/win64/$(APPNAMESELF)_win64
+endif
+
 EXT = .c
 SRCDIR = src
 OBJDIR = obj
@@ -61,7 +70,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%$(EXT)
 # Cleans complete project
 .PHONY: clean
 clean:
-	$(RM) $(DELOBJ) $(DEP) $(APPNAME) $(APPNAME)$(EXE)
+	$(RM) $(DELOBJ) $(DEP)
 
 # Cleans only all files with the extension .d
 .PHONY: cleandep
