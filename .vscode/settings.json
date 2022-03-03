@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "conio.h": "c",
+        "stdlib.h": "c",
+        "ncurses.h": "c",
+        "locale.h": "c",
+        "console.h": "c",
+        "sstream": "c"
+    }
+}

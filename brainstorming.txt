@@ -1,0 +1,10 @@
+2022/03/03
+~~~~~~~~~~
+
+For 7DRL:
+- You have to escape from a sinking ship, going up from the bottom.
+- Attacks / abilities are water- / steam-based.
+- Enemies try to drown you as each floor slowly fills with water.
+- The player must ascend to the next floor before drowing, while still
+  picking up enough equipment.
+- XP comes from exploring / finding new stuff, not from killing.
