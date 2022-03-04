@@ -7,12 +7,7 @@ int main(int argc, char **argv)
     char *_basicCharacterSet = "!\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
     wchar_t *_CP437 = L" ☺☻♥♦♣♠•◘○◙♂♀♪♫☼►◄↕‼¶§▬↨↑↓→←∟↔▲▼ !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~⌂ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ ";
     char _key = 0;
-    char *_name;
 
-    Console_Write(_console, 0, 0, "Enter your name: \n", 0, 0);
-    Console_Refresh(_console);
-    _name = Console_GetString(_console, 20);
-    Console_WriteWF(_console, 2, 0, 0, 0, L"♥ Hi, %s! ♥\n\n", _name);
     Console_Write(_console, 0, 0, "Press any key to continue...\n", 0, 0);
     Console_Refresh(_console);
 

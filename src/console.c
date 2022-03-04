@@ -19,9 +19,11 @@ Console *Console_Create()
     nodelay(console->window, FALSE);    // Getting a key makes the program wait.
     keypad(console->window, TRUE);      // The keypad can be used.
 
+    console->key = -1;
     console->size = (Size2D){ getmaxx(console->window), getmaxy(console->window) };
 
     start_color();
+    init_pair(0, COLOR_BLACK, COLOR_BLACK);
     init_pair(1, COLOR_WHITE, COLOR_BLACK);
     init_pair(2, COLOR_RED, COLOR_BLACK);
     init_pair(3, COLOR_YELLOW, COLOR_BLACK);
@@ -34,13 +36,6 @@ Console *Console_Create()
     console->colorPairsCount = 8;
 
     return console;
-}
-
-void Console_Delay(Console *console, size_t ms)
-{
-    double start = (double)clock() / (double)(CLOCKS_PER_SEC / 1000);
-
-    while ((double)clock() / (double)(CLOCKS_PER_SEC / 1000) < start + (double)ms);
 }
 
 void Console_Destroy(Console *console)
@@ -68,7 +63,8 @@ char *Console_GetString(Console *console, size_t size)
 
 char Console_Getch(Console *console)
 {
-    return wgetch(console->window);
+    console->key = wgetch(console->window);
+    return console->key;
 }
 
 void Console_Refresh(Console *console)
@@ -106,6 +102,23 @@ void Console_SetCharW(Console *console, int y, int x, wchar_t wchr, int colorPai
 void Console_SetCursor(Console *console, int cursor)
 {
     curs_set(cursor);
+}
+
+void Console_SetNoDelay(Console *console, bool noDelay)
+{
+    nodelay(console->window, noDelay);
+}
+
+void Console_SetNoEcho(Console *console, bool noEcho)
+{
+    if(noEcho) noecho(); else echo();
+}
+
+void Console_Wait(Console *console, size_t ms)
+{
+    double start = (double)clock() / (double)(CLOCKS_PER_SEC / 1000);
+
+    while ((double)clock() / (double)(CLOCKS_PER_SEC / 1000) < start + (double)ms);
 }
 
 void Console_Write(Console *console, int y, int x, char *str, int colorPair, int attributes)

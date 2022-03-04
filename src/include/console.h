@@ -1,6 +1,7 @@
 #ifndef CONSOLE_H_yMWGhus96Xse2J2e
 #define CONSOLE_H_yMWGhus96Xse2J2e
 
+#include <stdbool.h>
 #include <locale.h>
 #include <stdlib.h>
 #include <time.h>
@@ -14,6 +15,19 @@
     #include <curses.h>
 #endif
 
+#define CONSOLECOLORPAIR_BLACKBLACK     0
+#define CONSOLECOLORPAIR_WHITEBLACK     1
+#define CONSOLECOLORPAIR_REDBLACK       2
+#define CONSOLECOLORPAIR_YELLOWBLACK    3
+#define CONSOLECOLORPAIR_BLUEBLACK      4
+#define CONSOLECOLORPAIR_GREENBLACK     5
+#define CONSOLECOLORPAIR_MAGENTABLACK   6
+#define CONSOLECOLORPAIR_CYANBLACK      7
+#define CONSOLECOLORPAIR_BLACKWHITE     8
+
+//char *_basicCharacterSet = "!\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+//wchar_t *_CP437 = L" ☺☻♥♦♣♠•◘○◙♂♀♪♫☼►◄↕‼¶§▬↨↑↓→←∟↔▲▼ !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~⌂ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ ";
+
 typedef struct Size2D
 {
     size_t width, height;
@@ -22,6 +36,7 @@ typedef struct Size2D
 typedef struct Console
 {
     size_t colorPairsCount;
+    int key;
     Size2D size;
     WINDOW *window;
 } Console;
@@ -29,13 +44,15 @@ typedef struct Console
 Console *Console_Create();
 void Console_Clear(Console *console);
 char Console_Getch(Console *console);
-void Console_Delay(Console *console, size_t ms);
 void Console_Destroy(Console *console);
 char *Console_GetString(Console *console, size_t size);
 void Console_Refresh(Console *console);
 void Console_SetChar(Console *console, int y, int x, char chr, int colorPair, int attributes);
 void Console_SetCharW(Console *console, int y, int x, wchar_t wchr, int colorPair, int attributes);
 void Console_SetCursor(Console *console, int cursor);
+void Console_SetNoDelay(Console *console, bool noDelay);
+void Console_SetNoEcho(Console *console, bool noEcho);
+void Console_Wait(Console *console, size_t ms);
 void Console_Write(Console *console, int y, int x, char *str, int colorPair, int attributes);
 void Console_WriteF(Console *console, int y, int x, int colorPair, int attributes, const char *fmt, ...);
 void Console_WriteW(Console *console, int y, int x, wchar_t *wstr, int colorPair, int attributes);
