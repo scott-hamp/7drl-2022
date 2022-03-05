@@ -1,10 +1,7 @@
 #ifndef CONSOLE_H_yMWGhus96Xse2J2e
 #define CONSOLE_H_yMWGhus96Xse2J2e
 
-#include <stdbool.h>
-#include <locale.h>
-#include <stdlib.h>
-#include <time.h>
+#include "geometry.h"
 
 // BUILDINDEX = { 0: linux, 1: win64 }
 
@@ -27,11 +24,6 @@
 
 //char *_basicCharacterSet = "!\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 //wchar_t *_CP437 = L" ☺☻♥♦♣♠•◘○◙♂♀♪♫☼►◄↕‼¶§▬↨↑↓→←∟↔▲▼ !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~⌂ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ ";
-
-typedef struct Size2D
-{
-    size_t width, height;
-} Size2D;
 
 typedef struct Console
 {

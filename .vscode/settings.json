@@ -5,6 +5,7 @@
         "ncurses.h": "c",
         "locale.h": "c",
         "console.h": "c",
-        "sstream": "c"
+        "sstream": "c",
+        "game.h": "c"
     }
 }
