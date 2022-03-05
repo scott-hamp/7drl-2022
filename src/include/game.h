@@ -9,10 +9,12 @@ typedef struct Game
     Console *console;
     char key;
     Map *map;
+    int screen;
 } Game;
 
 Game *Game_Create(Console *console);
 void Game_Destroy(Game *game);
+Direction2D Game_GetInputDirection(Game *game, char key);
 void Game_HandleInput(Game *game);
 
 #endif

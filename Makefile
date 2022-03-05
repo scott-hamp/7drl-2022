@@ -18,9 +18,9 @@ else
 endif
 
 ifeq ($(BUILD),linux)
-	LDFLAGS = -lncursesw
+	LDFLAGS = -lncursesw -lm
 else
-	LDFLAGS = -lpdcurses
+	LDFLAGS = -lpdcurses -lm
 endif
 
 PROJECTNAME = 7drl-2022

@@ -38,6 +38,7 @@ void Console_Clear(Console *console);
 char Console_Getch(Console *console);
 void Console_Destroy(Console *console);
 char *Console_GetString(Console *console, size_t size);
+void Console_MoveCursor(Console *console, Point2D point);
 void Console_Refresh(Console *console);
 void Console_SetChar(Console *console, int y, int x, char chr, int colorPair, int attributes);
 void Console_SetCharW(Console *console, int y, int x, wchar_t wchr, int colorPair, int attributes);

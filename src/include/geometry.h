@@ -3,6 +3,11 @@
 
 #include "headers.h"
 
+typedef struct Direction2D
+{
+    int x, y;
+} Direction2D;
+
 typedef struct Point2D
 {
     int x, y;
