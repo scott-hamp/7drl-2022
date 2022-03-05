@@ -32,12 +32,15 @@ typedef struct Map
 {
     MapTile **tiles;
     Point2D renderOffset;
+    Rect2D *rooms[25];
+    size_t roomsCount;
     Size2D size;
 } Map;
 
 Map *Map_Create(Size2D size, Point2D renderOffset);
 void Map_Destroy(Map *map);
 void Map_Generate(Map *map);
+int Map_GetRoomIndexContaining(Map *map, Point2D point);
 void Map_Render(Map *map, Console *console);
 MapObject *MapObject_Create(uint16_t id);
 void MapObject_Destroy(MapObject *mapObject);

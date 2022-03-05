@@ -28,6 +28,11 @@ void Game_HandleInput(Game *game)
     Map_Generate(game->map);
 
     Console_Clear(game->console);
+
     Map_Render(game->map, game->console);
+
+    //Console_WriteF(game->console, 0, 0, CONSOLECOLORPAIR_WHITEBLACK, 0, "COUNT: %d", game->map->roomsCount);
+    Console_WriteF(game->console, game->map->size.height + 1, 0, CONSOLECOLORPAIR_BLACKWHITE, 0, "KEY = %d", game->key);
+
     Console_Refresh(game->console);
 }

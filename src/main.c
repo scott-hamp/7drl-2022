@@ -2,6 +2,8 @@
 
 int main(int argc, char **argv)
 {
+    srand(time(NULL));
+    
     Console *console = Console_Create();
 
     Game *game = Game_Create(console);

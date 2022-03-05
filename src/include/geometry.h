@@ -13,4 +13,10 @@ typedef struct Size2D
     size_t width, height;
 } Size2D;
 
+typedef struct Rect2D
+{
+    Point2D position;
+    Size2D size;
+} Rect2D;
+
 #endif
