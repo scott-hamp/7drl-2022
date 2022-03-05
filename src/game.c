@@ -68,8 +68,8 @@ void Game_HandleInput(Game *game)
         Console_Clear(game->console);
         Map_Render(game->map, game->map->player, game->console);
         Console_WriteF(game->console, game->map->size.height + 1, 0, CONSOLECOLORPAIR_BLACKWHITE, 0, "KEY = %d   ", game->key);
-        Console_Refresh(game->console);
         Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->map->player->position.x, game->map->renderOffset.y + game->map->player->position.y });
+        Console_Refresh(game->console);
 
         game->screen = 1;
         return;
@@ -96,8 +96,8 @@ void Game_HandleInput(Game *game)
         }
 
         Console_WriteF(game->console, game->map->size.height + 1, 0, CONSOLECOLORPAIR_BLACKWHITE, 0, "KEY = %d   ", game->key);
-        Console_Refresh(game->console);
         Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->map->player->position.x, game->map->renderOffset.y + game->map->player->position.y });
+        Console_Refresh(game->console);
 
         return;
     }

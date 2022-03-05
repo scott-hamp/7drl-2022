@@ -70,6 +70,7 @@ char Console_Getch(Console *console)
 void Console_MoveCursor(Console *console, Point2D point)
 {
     wmove(console->window, point.y, point.x);
+    //move(point.y, point.x);
 }
 
 void Console_Refresh(Console *console)
