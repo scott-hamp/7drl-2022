@@ -36,6 +36,8 @@ typedef struct Console
 Console *Console_Create();
 void Console_Clear(Console *console);
 void Console_ClearRow(Console *console, int y);
+void Console_DrawBar(Console *console, int y, int x, size_t width, int value, int valueMax, int colorPair, int attributes);
+void Console_DrawBarW(Console *console, int y, int x, size_t width, int value, int valueMax, int colorPair, int attributes);
 char Console_Getch(Console *console);
 void Console_Destroy(Console *console);
 char *Console_GetString(Console *console, size_t size);

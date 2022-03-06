@@ -19,6 +19,7 @@ typedef struct Game
     size_t logSize;
     Map *map;
     int screen;
+    uint64_t turn;
 } Game;
 
 Game *Game_Create(Console *console);
@@ -27,6 +28,8 @@ Direction2D Game_GetInputDirection(Game *game, char key);
 void Game_HandleInput(Game *game);
 void Game_Log(Game *game, char *str, int colorPair, int attributes);
 void Game_LogF(Game *game, int colorPair, int attributes, const char *fmt, ...);
+void Game_MapNextTurn(Game *game, Map *map);
+void Game_MapObjectTakesTurn(Game *game, Map *map, MapObject *mapObject);
 void Game_RenderUI(Game *game);
 
 #endif

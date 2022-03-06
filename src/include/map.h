@@ -8,6 +8,8 @@
 
 #define MAPOBJECTID_PLAYER          0
 #define MAPOBJECTID_DOOR            1
+#define MAPOBJECTID_WATER           2
+#define MAPOBJECTID_WATERSOURCE     3
 
 #define MAPOBJECTFLAG_BLOCKSGAS             1 << 0
 #define MAPOBJECTFLAG_BLOCKSLIGHT           1 << 1
@@ -15,9 +17,12 @@
 #define MAPOBJECTFLAG_BLOCKSSOLID           1 << 3
 #define MAPOBJECTFLAG_CANMOVE               1 << 4
 #define MAPOBJECTFLAG_CANOPEN               1 << 5
-#define MAPOBJECTFLAG_ISOPEN                1 << 6
-#define MAPOBJECTFLAG_PLACEINDOORWAYS       1 << 7
-#define MAPOBJECTFLAG_PLAYER                1 << 8
+#define MAPOBJECTFLAG_ISLIQUID              1 << 6
+#define MAPOBJECTFLAG_ISLIQUIDSOURCE        1 << 7
+#define MAPOBJECTFLAG_ISLIVING              1 << 8
+#define MAPOBJECTFLAG_ISOPEN                1 << 9
+#define MAPOBJECTFLAG_PLACEINDOORWAYS       1 << 10
+#define MAPOBJECTFLAG_PLAYER                1 << 11
 
 #define MAPOBJECTVIEWSTATE_UNSEEN   0
 #define MAPOBJECTVIEWSTATE_SEEN     1
@@ -50,10 +55,15 @@ typedef struct MapObject
 {
     int colorPair;
     uint32_t flags;
+    int height;
+    int hp, o2;
+    size_t hpMax, o2Max;
     char *name;
     Point2D position;
     MapObjectAsItem *objects[10];
     size_t objectsCount;
+    int turnTicks;
+    size_t turnTicksSize;
     MapObjectView **view;
     wchar_t wchr, wchrAlt;
 } MapObject;
@@ -85,6 +95,8 @@ typedef struct MapTileVisual
 
 typedef struct Map
 {
+    int levelFloodTimer;
+    size_t levelFloodTimerSize;
     MapObject *player;
     Point2D renderOffset;
     Point2D *roomDoorways[10];
@@ -110,6 +122,7 @@ void Map_PlaceObject(Map *map, MapObject *mapObject);
 void Map_Render(Map *map, MapObject *viewer, Console *console);
 void Map_ResetObjectView(Map* map, MapObject *mapObject);
 void Map_UpdateObjectView(Map* map, MapObject *mapObject);
+MapObject *MapObject_Copy(MapObject *mapObject);
 MapObject *MapObject_Create(const char *name);
 MapObjectAction *MapObjectAction_Create(int type);
 void MapObjectAction_Destroy(MapObjectAction *action);

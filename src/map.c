@@ -49,6 +49,8 @@ Map *Map_Create(Size2D size, Point2D renderOffset)
 {
     Map *map = malloc(sizeof(Map));
 
+    map->levelFloodTimer = 999;
+    map->levelFloodTimerSize = 999;
     map->size = size;
     map->renderOffset = renderOffset;
 
@@ -72,17 +74,46 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
     if(id == MAPOBJECTID_PLAYER) // Player
     {
         mapObject->name = "Player";
-        mapObject->flags |= (MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_PLAYER);
+        mapObject->flags |= (MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLAYER);
+        mapObject->hp = 10;
+        mapObject->hpMax = 10;
+        mapObject->o2 = 20;
+        mapObject->o2Max = 20;
+        mapObject->turnTicks = 10;
+        mapObject->turnTicksSize = 10;
         mapObject->wchr = L'@';
+        mapObject->wchrAlt = L'@';
         hasView = true;
     }
 
     if(id == MAPOBJECTID_DOOR) // Door
     {
-        mapObject->name = "Door";
+        mapObject->name = "door";
         mapObject->flags |= (MAPOBJECTFLAG_CANOPEN | MAPOBJECTFLAG_BLOCKSGAS | MAPOBJECTFLAG_BLOCKSLIGHT | MAPOBJECTFLAG_BLOCKSLIQUID | MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_PLACEINDOORWAYS);
         mapObject->wchr = L'+';
         mapObject->wchrAlt = L'`';
+    }
+
+    if(id == MAPOBJECTID_WATER) // Water
+    {
+        mapObject->colorPair = CONSOLECOLORPAIR_CYANBLACK;
+        mapObject->name = "water";
+        mapObject->flags |= MAPOBJECTFLAG_ISLIQUID;
+        mapObject->turnTicks = 2;
+        mapObject->turnTicksSize = 2;
+        mapObject->wchr = L'~';
+        mapObject->wchrAlt = L'≈';
+    }
+
+    if(id == MAPOBJECTID_WATERSOURCE) // Water source
+    {
+        mapObject->colorPair = CONSOLECOLORPAIR_CYANBLACK;
+        mapObject->name = "water source";
+        mapObject->flags |= MAPOBJECTFLAG_ISLIQUIDSOURCE;
+        mapObject->turnTicks = 5;
+        mapObject->turnTicksSize = 5;
+        mapObject->wchr = L'○';
+        mapObject->wchrAlt = L'○';
     }
 
     if(hasView)
@@ -123,6 +154,9 @@ void Map_DestroyObject(Map* map, MapObject *mapObject)
 
 void Map_Generate(Map *map)
 {
+    map->levelFloodTimerSize = 100 + rand() % 10;
+    map->levelFloodTimer = (int)map->levelFloodTimerSize;
+
     for(int y = 0; y < map->size.height; y++)
     {
         for(int x = 0; x < map->size.width; x++)
@@ -426,8 +460,7 @@ void Map_PlaceObject(Map *map, MapObject *mapObject)
 
             tile = Map_GetTile(map, point);
             
-            if(tile->type != MAPTILETYPE_FLOOR) continue;
-            if(tile->objectsCount > 0) continue;
+            if(!(tile->passable & MAPTILEPASSABLE_SOLID)) continue;
         }
 
         mapObject->position = point;
@@ -517,6 +550,22 @@ void Map_UpdateObjectView(Map* map, MapObject *mapObject)
     }
 }
 
+MapObject *MapObject_Copy(MapObject *mapObject)
+{
+    MapObject *copy = MapObject_Create(mapObject->name);
+
+    copy->colorPair = mapObject->colorPair;
+    copy->flags = mapObject->flags;
+    copy->height = mapObject->height;
+    copy->position = mapObject->position;
+    copy->turnTicks = mapObject->turnTicks;
+    copy->turnTicksSize = mapObject->turnTicksSize;
+    copy->wchr = mapObject->wchr;
+    copy->wchrAlt = mapObject->wchrAlt;
+
+    return copy;
+}
+
 MapObject *MapObject_Create(const char *name)
 {
     MapObject *mapObject = malloc(sizeof(MapObject));
@@ -548,7 +597,7 @@ void MapTile_AddObject(MapTile *tile, MapObject *mapObject)
 {
     if(tile->objectsCount == 10) return;
 
-    for(int i = 1; i <= tile->objectsCount; i++)
+    for(int i = (int)tile->objectsCount; i > 0; i--)
         tile->objects[i] = tile->objects[i - 1];
 
     tile->objects[0] = mapObject;

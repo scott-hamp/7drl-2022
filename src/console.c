@@ -50,6 +50,30 @@ void Console_Destroy(Console *console)
     free(console);
 }
 
+void Console_DrawBar(Console *console, int y, int x, size_t width, int value, int valueMax, int colorPair, int attributes)
+{
+    //░▒▓
+
+    double per = (double)value / (double)valueMax;
+    size_t w = (size_t)((double)width * per);
+
+    for(int xx = 0; xx < w; xx++)
+        Console_SetChar(console, y, x + xx, '+', colorPair, attributes);
+    for(int xx = w; xx < width; xx++)
+        Console_SetChar(console, y, x + xx, '-', colorPair, attributes);
+}
+
+void Console_DrawBarW(Console *console, int y, int x, size_t width, int value, int valueMax, int colorPair, int attributes)
+{
+    double per = (double)value / (double)valueMax;
+    size_t w = (size_t)((double)width * per);
+
+    for(int xx = 0; xx < w; xx++)
+        Console_SetCharW(console, y, x + xx, L'▓', colorPair, attributes);
+    for(int xx = w; xx < width; xx++)
+        Console_SetCharW(console, y, x + xx, L'░', colorPair, attributes);
+}
+
 char *Console_GetString(Console *console, size_t size)
 {
     echo();
