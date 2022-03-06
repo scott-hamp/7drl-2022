@@ -15,6 +15,17 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
 
         if(!(tile->passable & MAPTILEPASSABLE_SOLID))
         {
+            if(tile->objectsCount > 0)
+            {
+                if(tile->objects[0]->flags & MAPOBJECTFLAG_CANOPEN)
+                {
+                    action->type = MAPOBJECTACTIONTYPE_OPEN;
+                    action->target = tile->objects[0];
+                    action->to = action->target->position;
+                    return Map_AttemptObjectAction(map, action);
+                }
+            }
+
             action->resultMessage = "Tile impassable.";
             return action;
         }
@@ -22,6 +33,12 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
         action->result = true;
         Map_MoveObject(map, action->object, to);
 
+        return action;
+    }
+
+    if(action->type == MAPOBJECTACTIONTYPE_OPEN)
+    {
+        action = Map_MapObjectAttemptActionAsTarget(map, action->target, action);
         return action;
     }
 
@@ -52,12 +69,20 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
     mapObject->view = NULL;
     bool hasView = false;
 
-    if(id == 0) // Player
+    if(id == MAPOBJECTID_PLAYER) // Player
     {
         mapObject->name = "Player";
         mapObject->flags |= (MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_PLAYER);
         mapObject->wchr = L'@';
         hasView = true;
+    }
+
+    if(id == MAPOBJECTID_DOOR) // Door
+    {
+        mapObject->name = "Door";
+        mapObject->flags |= (MAPOBJECTFLAG_CANOPEN | MAPOBJECTFLAG_BLOCKSGAS | MAPOBJECTFLAG_BLOCKSLIGHT | MAPOBJECTFLAG_BLOCKSLIQUID | MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_PLACEINDOORWAYS);
+        mapObject->wchr = L'+';
+        mapObject->wchrAlt = L'`';
     }
 
     if(hasView)
@@ -79,6 +104,21 @@ void Map_Destroy(Map *map)
     for(int i = 0; i < map->size.width * map->size.height; i++)
         MapTile_Destroy(map->tiles[i], map);
     free(map->tiles);
+}
+
+void Map_DestroyObject(Map* map, MapObject *mapObject)
+{
+    for(int i = 0; i < mapObject->objectsCount; i++)
+        Map_DestroyObject(map, mapObject->objects[i]);
+
+    if(mapObject->view != NULL)
+    {
+        for(int i = 0; i < map->size.width * map->size.height; i++)
+            free(mapObject->view[i]);
+        free(mapObject->view);
+    }
+
+    free(mapObject);
 }
 
 void Map_Generate(Map *map)
@@ -217,8 +257,42 @@ void Map_Generate(Map *map)
         if(toBreak) break;
     }
 
+    for(int i = 0; i < map->roomDoorwaysCount; i++)
+        free(map->roomDoorways[i]);
+    map->roomDoorwaysCount = 0;
+
+    for(int i = 0; i < map->roomsCount; i++)
+    {
+        Rect2D *room = map->rooms[i];
+
+        for(int y = -1; y <= (int)room->size.height; y++)
+        {
+            for(int x = -1; x <= (int)room->size.width; x++)
+            {
+                Point2D point = (Point2D){ room->position.x + x, room->position.y + y };
+
+                if(point.x < 1 || point.y < 1 || point.x >= map->size.width - 1 || point.y >= map->size.height - 1) 
+                    continue;
+
+                if(Map_GetTile(map, point)->type != MAPTILETYPE_FLOOR) 
+                    continue;
+
+                if(!((Map_GetTile(map, (Point2D){ point.x - 1, point.y })->type == MAPTILETYPE_WALL && Map_GetTile(map, (Point2D){ point.x + 1, point.y })->type == MAPTILETYPE_WALL) || (Map_GetTile(map, (Point2D){ point.x, point.y - 1 })->type == MAPTILETYPE_WALL && Map_GetTile(map, (Point2D){ point.x, point.y + 1 })->type == MAPTILETYPE_WALL)))
+                    continue;
+
+                map->roomDoorways[map->roomDoorwaysCount] = malloc(sizeof(Point2D));
+                map->roomDoorways[map->roomDoorwaysCount]->x = point.x;
+                map->roomDoorways[map->roomDoorwaysCount]->y = point.y;
+                map->roomDoorwaysCount++;
+            }
+        }
+    }
+
     map->player = Map_CreateObject(map, MAPOBJECTID_PLAYER);
     Map_PlaceObject(map, map->player);
+
+    for(int i = 0; i < 4 + rand() % 2; i++)
+        Map_PlaceObject(map, Map_CreateObject(map, MAPOBJECTID_DOOR));
 }
 
 int Map_GetRoomIndexContaining(Map *map, Point2D point)
@@ -282,6 +356,32 @@ MapTileVisual Map_GetTileVisual(Map *map, Point2D point)
     return (MapTileVisual){ colorPair, wchr };
 }
 
+MapObjectAction *Map_MapObjectAttemptActionAsTarget(Map *map, MapObject *mapObject, MapObjectAction *action)
+{
+    if(action->target != mapObject) return action;
+
+    if(action->type == MAPOBJECTACTIONTYPE_OPEN)
+    {
+        if(!(mapObject->flags & MAPOBJECTFLAG_CANOPEN))
+        {
+            action->resultMessage = "Cannot be opened.";
+            return action;
+        }
+
+        mapObject->flags ^= MAPOBJECTFLAG_ISOPEN;
+        wchar_t wchr = mapObject->wchr;
+        mapObject->wchr = mapObject->wchrAlt;
+        mapObject->wchrAlt = wchr;
+
+        MapTile_UpdatePassable(Map_GetTile(map, mapObject->position));
+
+        action->result = true;
+        return action;
+    }
+
+    return action;
+}
+
 void Map_MoveObject(Map *map, MapObject *mapObject, Point2D to)
 {
     MapTile *tileFrom = Map_GetTile(map, mapObject->position);
@@ -295,22 +395,44 @@ void Map_MoveObject(Map *map, MapObject *mapObject, Point2D to)
 
 void Map_PlaceObject(Map *map, MapObject *mapObject)
 {
-    while(true)
+    int timeout = 1000;
+
+    while(timeout > 0)
     {
+        timeout--;
+        
         Rect2D *room = map->rooms[rand() % map->roomsCount];
 
-        Point2D point = (Point2D){ room->position.x + 1 + rand() % (room->size.width - 2), room->position.y + 1 + rand() % (room->size.height - 2) };
-        if(point.x < 1 || point.y < 1 || point.x >= map->size.width - 1 || point.y >= map->size.height - 1) 
-            continue;
+        Point2D point = (Point2D){ -1, -1 };
+        MapTile *tile = NULL;
 
-        MapTile *tile = map->tiles[(point.y * map->size.width) + point.x];
+        if(mapObject->flags & MAPOBJECTFLAG_PLACEINDOORWAYS)
+        {
+            if(map->roomDoorwaysCount == 0) return;
+
+            Point2D *roomDoorway = map->roomDoorways[rand() % map->roomDoorwaysCount];
+            point = (Point2D){ roomDoorway->x, roomDoorway->y };
+            tile = Map_GetTile(map, point);
+            if(tile == NULL) continue;
+
+            if(!(tile->passable & MAPTILEPASSABLE_SOLID)) continue;
+        }
+        else
+        {
+            point = (Point2D){ room->position.x + 1 + rand() % (room->size.width - 2), room->position.y + 1 + rand() % (room->size.height - 2) };
         
-        if(tile->type != MAPTILETYPE_FLOOR) continue;
-        if(tile->objectsCount > 0) continue;
+            if(point.x < 1 || point.y < 1 || point.x >= map->size.width - 1 || point.y >= map->size.height - 1) 
+                continue;
+
+            tile = Map_GetTile(map, point);
+            
+            if(tile->type != MAPTILETYPE_FLOOR) continue;
+            if(tile->objectsCount > 0) continue;
+        }
 
         mapObject->position = point;
         MapTile_AddObject(tile, mapObject);
-        MapObject_UpdateView(mapObject, map);
+        Map_UpdateObjectView(map, mapObject);
 
         return;
     }
@@ -353,35 +475,7 @@ void Map_Render(Map *map, MapObject *viewer, Console *console)
     }
 }
 
-MapObject *MapObject_Create(const char *name)
-{
-    MapObject *mapObject = malloc(sizeof(MapObject));
-
-    mapObject->colorPair = CONSOLECOLORPAIR_WHITEBLACK;
-    mapObject->name = name;
-    mapObject->flags = 0;
-    mapObject->objectsCount = 0;
-    mapObject->wchr = L' ';
-
-    return mapObject;
-}
-
-void MapObject_Destroy(MapObject *mapObject, Map* map)
-{
-    for(int i = 0; i < mapObject->objectsCount; i++)
-        MapObject_Destroy(mapObject->objects[i], map);
-
-    if(mapObject->view != NULL)
-    {
-        for(int i = 0; i < map->size.width * map->size.height; i++)
-            free(mapObject->view[i]);
-        free(mapObject->view);
-    }
-
-    free(mapObject);
-}
-
-void MapObject_ResetView(MapObject *mapObject, Map* map)
+void Map_ResetObjectView(Map* map, MapObject *mapObject)
 {
     if(mapObject->view == NULL) return;
 
@@ -392,7 +486,7 @@ void MapObject_ResetView(MapObject *mapObject, Map* map)
     }
 }
 
-void MapObject_UpdateView(MapObject *mapObject, Map* map)
+void Map_UpdateObjectView(Map* map, MapObject *mapObject)
 {
     if(mapObject->view == NULL) return;
 
@@ -403,9 +497,11 @@ void MapObject_UpdateView(MapObject *mapObject, Map* map)
         mapObject->view[i]->state = MAPOBJECTVIEWSTATE_SEEN;
     }
 
+    int viewLength = (Map_GetRoomIndexContaining(map, mapObject->position) > -1) ? 10 : 2;
+
     for(int d = 0; d < 360; d++)
     {
-        for(int l = 0; l < 8; l++)
+        for(int l = 0; l < viewLength; l++)
         {
             Point2D point = (Point2D){ round(mapObject->position.x + sin(d) * l), round(mapObject->position.y + cos(d) * l) };
             MapTile *tile = Map_GetTile(map, point);
@@ -419,6 +515,19 @@ void MapObject_UpdateView(MapObject *mapObject, Map* map)
             if(!(tile->passable & MAPTILEPASSABLE_LIGHT)) break;
         }
     }
+}
+
+MapObject *MapObject_Create(const char *name)
+{
+    MapObject *mapObject = malloc(sizeof(MapObject));
+
+    mapObject->colorPair = CONSOLECOLORPAIR_WHITEBLACK;
+    mapObject->name = name;
+    mapObject->flags = 0;
+    mapObject->objectsCount = 0;
+    mapObject->wchr = L' ';
+
+    return mapObject;
 }
 
 MapObjectAction *MapObjectAction_Create(int type)
@@ -444,6 +553,8 @@ void MapTile_AddObject(MapTile *tile, MapObject *mapObject)
 
     tile->objects[0] = mapObject;
     tile->objectsCount++;
+
+    MapTile_UpdatePassable(tile);
 }
 
 void MapTile_Destroy(MapTile *tile, Map *map)
@@ -455,7 +566,7 @@ void MapTile_Destroy(MapTile *tile, Map *map)
 void MapTile_DestroyObjects(MapTile *tile, Map *map)
 {
     for(int i = 0; i < tile->objectsCount; i++)
-        MapObject_Destroy(tile->objects[i], map);
+        Map_DestroyObject(map, tile->objects[i]);
     tile->objectsCount = 0;
 }
 
@@ -479,16 +590,38 @@ void MapTile_RemoveObject(MapTile *tile, MapObject *mapObject)
             tile->objects[j] = tile->objects[j + 1];
 
         tile->objectsCount--;
-        return;
     }
+
+    MapTile_UpdatePassable(tile);
 }
 
 void MapTile_SetType(MapTile *tile, int type)
 {
     tile->type = type;
 
-    if(type == MAPTILETYPE_EMPTY || type == MAPTILETYPE_WALL)
+    MapTile_UpdatePassable(tile);
+}
+
+void MapTile_UpdatePassable(MapTile *tile)
+{
+    if(tile->type == MAPTILETYPE_EMPTY || tile->type == MAPTILETYPE_WALL)
         tile->passable = 0;
-    if(type == MAPTILETYPE_FLOOR)
+    if(tile->type == MAPTILETYPE_FLOOR)
         tile->passable = MAPTILEPASSABLE_SOLID | MAPTILEPASSABLE_LIQUID | MAPTILEPASSABLE_GAS | MAPTILEPASSABLE_LIGHT;
+
+    if(tile->objectsCount == 0) return;
+
+    MapObject *mapObject = tile->objects[0];
+
+    if((mapObject->flags & MAPOBJECTFLAG_CANOPEN) && (mapObject->flags & MAPOBJECTFLAG_ISOPEN))
+        return;
+
+    if(mapObject->flags & MAPOBJECTFLAG_BLOCKSGAS)
+        tile->passable &= ~MAPTILEPASSABLE_GAS;
+    if(mapObject->flags & MAPOBJECTFLAG_BLOCKSLIGHT)
+        tile->passable &= ~MAPTILEPASSABLE_LIGHT;
+    if(mapObject->flags & MAPOBJECTFLAG_BLOCKSLIQUID)
+        tile->passable &= ~MAPTILEPASSABLE_LIQUID;
+    if(mapObject->flags & MAPOBJECTFLAG_BLOCKSSOLID)
+        tile->passable &= ~MAPTILEPASSABLE_SOLID;
 }

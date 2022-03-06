@@ -5,6 +5,12 @@ void Console_Clear(Console *console)
     wclear(console->window);
 }
 
+void Console_ClearRow(Console *console, int y)
+{
+    for(int x = 0; x < console->size.width; x++)
+        Console_SetChar(console, y, x, ' ', 0, 0);
+}
+
 Console *Console_Create()
 {
     setlocale(LC_ALL, "");      // Set the locale to that of the user.

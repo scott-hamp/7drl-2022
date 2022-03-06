@@ -7,6 +7,13 @@
         "console.h": "c",
         "sstream": "c",
         "game.h": "c",
-        "unordered_map": "c"
+        "unordered_map": "c",
+        "array": "c",
+        "functional": "c",
+        "istream": "c",
+        "ostream": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c"
     }
 }

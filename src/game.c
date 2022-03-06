@@ -65,9 +65,13 @@ void Game_HandleInput(Game *game)
     if(game->screen == 0)
     {
         Map_Generate(game->map);
+        Game_Log(game, "The ship teeters on the brink...", CONSOLECOLORPAIR_WHITEBLACK, 0);
+
         Console_Clear(game->console);
         Map_Render(game->map, game->map->player, game->console);
-        Console_WriteF(game->console, game->map->size.height + 1, 0, CONSOLECOLORPAIR_BLACKWHITE, 0, "KEY = %d   ", game->key);
+        
+        Game_RenderUI(game);
+        
         Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->map->player->position.x, game->map->renderOffset.y + game->map->player->position.y });
         Console_Refresh(game->console);
 
@@ -88,17 +92,61 @@ void Game_HandleInput(Game *game)
 
             if(action->result)
             {
-                MapObject_UpdateView(game->map->player, game->map);
+                Map_UpdateObjectView(game->map, game->map->player);
                 Map_Render(game->map, game->map->player, game->console);
+
+                if(action->type == MAPOBJECTACTIONTYPE_OPEN)
+                    Game_Log(game, "You open the door.", CONSOLECOLORPAIR_WHITEBLACK, 0);
             }
 
             MapObjectAction_Destroy(action);
         }
 
-        Console_WriteF(game->console, game->map->size.height + 1, 0, CONSOLECOLORPAIR_BLACKWHITE, 0, "KEY = %d   ", game->key);
+        Game_RenderUI(game);
+
         Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->map->player->position.x, game->map->renderOffset.y + game->map->player->position.y });
         Console_Refresh(game->console);
 
         return;
+    }
+}
+
+void Game_Log(Game *game, char *str, int colorPair, int attributes)
+{
+    LogMessage *logMessage = malloc(sizeof(LogMessage));
+    logMessage->attributes = attributes;
+    logMessage->colorPair = colorPair;
+    logMessage->str = str;
+
+    game->log[game->logSize] = logMessage;
+    game->logSize++;
+}
+
+void Game_LogF(Game *game, int colorPair, int attributes, const char *fmt, ...)
+{
+    va_list args;        
+    va_start(args, fmt);
+
+    char str[256];
+    memset(str, 0, 256);
+    vsnprintf(str, 256, fmt, args);
+
+    Game_Log(game, str, colorPair, attributes);
+
+    va_end(args);
+}
+
+void Game_RenderUI(Game *game)
+{
+    Console_WriteF(game->console, 0, 0, CONSOLECOLORPAIR_BLACKWHITE, 0, "KEY = %d   ", game->key);
+    
+    int max = 5;
+    if(game->logSize < 5) max = game->logSize;
+
+    for(int i = 0; i < max; i++)
+    {
+        LogMessage *lm = game->log[game->logSize - (i + 1)];
+        Console_ClearRow(game->console, game->map->size.height + i);
+        Console_Write(game->console, game->map->size.height + i, 0, lm->str, lm->colorPair, lm->attributes);
     }
 }
