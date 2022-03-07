@@ -1,16 +1,18 @@
 #ifndef CONSOLE_H_yMWGhus96Xse2J2e
 #define CONSOLE_H_yMWGhus96Xse2J2e
 
-#include "geometry.h"
-
 // BUILDINDEX = { 0: linux, 1: win64 }
 
 #if BUILDINDEX == 0
     #define _XOPEN_SOURCE_EXTENDED
     #include <ncursesw/curses.h>
 #else
-    #include <curses.h>
+    //#define PDC_DLL_BUILD
+    //#include <curses.h>
+    #include <ncursesw/curses.h>
 #endif
+
+#include "geometry.h"
 
 #define CONSOLECOLORPAIR_BLACKBLACK     0
 #define CONSOLECOLORPAIR_WHITEBLACK     1

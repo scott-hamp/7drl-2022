@@ -367,7 +367,7 @@ MapTileVisual Map_GetTileVisual(Map *map, Point2D point)
     {
         //░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀
 
-        if(tile->type == MAPTILETYPE_FLOOR) 
+        if(tile->type == MAPTILETYPE_FLOOR)
             wchr = (Map_GetRoomIndexContaining(map, (Point2D){ point.x, point.y }) > -1) ? L'.' : L'▒';
         if(tile->type == MAPTILETYPE_WALL)
         {
@@ -473,11 +473,26 @@ void Map_PlaceObject(Map *map, MapObject *mapObject)
 
 void Map_Render(Map *map, MapObject *viewer, Console *console)
 {
+    Rect2D rect;
+    rect.position = (Point2D){ 0, 0 };
+    rect.size = (Size2D){ map->size.width, map->size.height };
+
+    Map_RenderRect(map, viewer, console, rect);
+}
+
+void Map_RenderRect(Map *map, MapObject *viewer, Console *console, Rect2D rect)
+{
+    if(viewer->view == NULL) return;
+
     for(int y = 0; y < map->size.height; y++)
     {
         for(int x = 0; x < map->size.width; x++)
         {
-            MapTile *tile = map->tiles[(y * map->size.width) + x];
+            if(x < rect.position.x || y < rect.position.y || x > rect.position.x + rect.size.width || y > rect.position.y + rect.size.height)
+                continue;
+
+            Point2D mapPoint = (Point2D){ x, y };
+            MapTile *tile = Map_GetTile(map, mapPoint);
 
             int colorPair = CONSOLECOLORPAIR_WHITEBLACK;
             wchar_t wchr = L' ';
@@ -485,9 +500,10 @@ void Map_Render(Map *map, MapObject *viewer, Console *console)
             if(x > 0 && y > 0 && x < map->size.width - 1 && y < map->size.height - 1)
             {
                 MapObjectView *view = viewer->view[(y * map->size.width) + x];
+                
                 if(view->state == MAPOBJECTVIEWSTATE_VISIBLE)
                 {
-                    MapTileVisual visual = Map_GetTileVisual(map, (Point2D){ x, y });
+                    MapTileVisual visual = Map_GetTileVisual(map, mapPoint);
                     colorPair = visual.colorPair;
                     wchr = visual.wchr;
                 }
@@ -495,15 +511,15 @@ void Map_Render(Map *map, MapObject *viewer, Console *console)
                 {
                     if(view->state == MAPOBJECTVIEWSTATE_SEEN)
                     {
-                        wchr = view->wchr;
-                        if(wchr == L'.') wchr = L' ';
-                        if(wchr == L'▒') wchr = L'░';
+                        //wchr = view->wchr;
+                        //if(wchr == L'.') wchr = L' ';
+                        //if(wchr == L'▒') wchr = L'░';
                     }
                 }
             }
 
-            Point2D point = (Point2D){ map->renderOffset.x + x, map->renderOffset.y + y };
-            Console_SetCharW(console, point.y, point.x, wchr, colorPair, 0);
+            Point2D renderPoint = (Point2D){ map->renderOffset.x + x, map->renderOffset.y + y };
+            Console_SetCharW(console, renderPoint.y, renderPoint.x, wchr, colorPair, 0);
         }
     }
 }

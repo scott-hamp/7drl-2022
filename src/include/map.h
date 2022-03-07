@@ -120,6 +120,7 @@ MapObjectAction *Map_MapObjectAttemptActionAsTarget(Map *map, MapObject *mapObje
 void Map_MoveObject(Map *map, MapObject *mapObject, Point2D to);
 void Map_PlaceObject(Map *map, MapObject *mapObject);
 void Map_Render(Map *map, MapObject *viewer, Console *console);
+void Map_RenderRect(Map *map, MapObject *viewer, Console *console, Rect2D rect);
 void Map_ResetObjectView(Map* map, MapObject *mapObject);
 void Map_UpdateObjectView(Map* map, MapObject *mapObject);
 MapObject *MapObject_Copy(MapObject *mapObject);

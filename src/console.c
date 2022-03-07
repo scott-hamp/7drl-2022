@@ -100,7 +100,6 @@ char Console_Getch(Console *console)
 void Console_MoveCursor(Console *console, Point2D point)
 {
     wmove(console->window, point.y, point.x);
-    //move(point.y, point.x);
 }
 
 void Console_Refresh(Console *console)
@@ -123,6 +122,12 @@ void Console_SetCharW(Console *console, int y, int x, wchar_t wchr, int colorPai
 
     attron(color | attributes);
 
+    wchar_t wstr[2];
+    wstr[0] = wchr;
+    wstr[1] = 0;
+    mvwaddnwstr(console->window, y, x, wstr, 1);
+
+    /*
     #if BUILDINDEX == 0
         wchar_t wstr[2];
         wstr[0] = wchr;
@@ -131,6 +136,7 @@ void Console_SetCharW(Console *console, int y, int x, wchar_t wchr, int colorPai
     #else
         mvwaddch(console->window, y, x, wchr); 
     #endif
+    */
 
     attroff(color | attributes);
 }

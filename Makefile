@@ -14,13 +14,13 @@ endif
 ifeq ($(BUILD),linux)
 	CXXFLAGS = -std=c17 -w -DBUILDINDEX=0
 else
-	CXXFLAGS = -std=c17 -w -DBUILDINDEX=1 -mwindows -I$(WIN64)/include -L$(WIN64)/lib
+	CXXFLAGS = -std=c17 -w -DBUILDINDEX=1 -I$(WIN64)/ncursesw/include -L$(WIN64)/ncursesw/lib
 endif
 
 ifeq ($(BUILD),linux)
 	LDFLAGS = -lncursesw -lm
 else
-	LDFLAGS = -lpdcurses -lm
+	LDFLAGS = -lncursesw -lm
 endif
 
 PROJECTNAME = 7drl-2022

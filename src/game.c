@@ -5,7 +5,7 @@ Game *Game_Create(Console *console)
     Game *game = malloc(sizeof(Game));
     game->active = true;
     game->console = console;
-    game->map = Map_Create((Size2D){ console->size.width, console->size.height - 5 }, (Point2D){ 0, 0 });
+    game->map = Map_Create((Size2D){ 80, 20 }, (Point2D){ 0, 0 });
     game->screen = 0;
     game->turn = 1;
 
@@ -115,6 +115,11 @@ void Game_HandleInput(Game *game)
         }
 
         Map_UpdateObjectView(game->map, game->map->player);
+
+        Rect2D rect;
+        rect.position = (Point2D){ game->map->player->position.x - 5, game->map->player->position.y - 5 };
+        rect.size = (Size2D){ 10, 10 };
+
         Map_Render(game->map, game->map->player, game->console);
 
         Game_RenderUI(game);
