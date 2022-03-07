@@ -37,12 +37,6 @@
 #define MAPTILETYPE_FLOOR           1
 #define MAPTILETYPE_WALL            2
 
-typedef struct MapObjectView
-{
-    short state;
-    wchar_t wchr;
-} MapObjectView;
-
 typedef struct MapObjectAsItem
 {
     int colorPair;
@@ -64,7 +58,7 @@ typedef struct MapObject
     size_t objectsCount;
     int turnTicks;
     size_t turnTicksSize;
-    MapObjectView **view;
+    int *view;
     wchar_t wchr, wchrAlt;
 } MapObject;
 
@@ -86,12 +80,6 @@ typedef struct MapTile
     uint8_t passable;
     int type;
 } MapTile;
-
-typedef struct MapTileVisual
-{
-    int colorPair;
-    wchar_t wchr;
-} MapTileVisual;
 
 typedef struct Map
 {
@@ -115,7 +103,8 @@ void Map_DestroyObject(Map* map, MapObject *mapObject);
 void Map_Generate(Map *map);
 int Map_GetRoomIndexContaining(Map *map, Point2D point);
 MapTile *Map_GetTile(Map *map, Point2D point);
-MapTileVisual Map_GetTileVisual(Map *map, Point2D point);
+int Map_GetPointColorPair(Map *map, Point2D point);
+wchar_t Map_GetPointWChr(Map *map, Point2D point);
 MapObjectAction *Map_MapObjectAttemptActionAsTarget(Map *map, MapObject *mapObject, MapObjectAction *action);
 void Map_MoveObject(Map *map, MapObject *mapObject, Point2D to);
 void Map_PlaceObject(Map *map, MapObject *mapObject);

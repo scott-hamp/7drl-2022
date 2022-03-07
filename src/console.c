@@ -74,6 +74,28 @@ void Console_DrawBarW(Console *console, int y, int x, size_t width, int value, i
         Console_SetCharW(console, y, x + xx, L'░', colorPair, attributes);
 }
 
+void Console_FillRandomly(Console *console)
+{
+    char *basicCharacterSet = "!\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+
+    for(int y = 0; y < console->size.height; y++)
+    {
+        for(int x = 0; x < console->size.width; x++)
+            Console_SetChar(console, y, x, basicCharacterSet[rand() % strlen(basicCharacterSet)], rand() % console->colorPairsCount, 0);
+    }
+}
+
+void Console_FillRandomlyW(Console *console)
+{
+    wchar_t *CP437 = L" ☺☻♥♦♣♠•◘○◙♂♀♪♫☼►◄↕‼¶§▬↨↑↓→←∟↔▲▼ !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~⌂ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ ";
+
+    for(int y = 0; y < console->size.height; y++)
+    {
+        for(int x = 0; x < console->size.width; x++)
+            Console_SetCharW(console, y, x, CP437[rand() % 256], rand() % console->colorPairsCount, 0);
+    }
+}
+
 char *Console_GetString(Console *console, size_t size)
 {
     echo();
@@ -165,11 +187,16 @@ void Console_Wait(Console *console, size_t ms)
 
 void Console_Write(Console *console, int y, int x, char *str, int colorPair, int attributes)
 {
+    for(int i = 0; i < strlen(str); i++)
+        Console_SetChar(console, y, x + i, str[i], colorPair, attributes);
+
+    /*
     chtype color = COLOR_PAIR(colorPair);
 
     attron(color | attributes);
     mvwaddstr(console->window, y, x, str);
     attroff(color | attributes);
+    */
 }
 
 void Console_WriteF(Console *console, int y, int x, int colorPair, int attributes, const char *fmt, ...)
@@ -188,11 +215,16 @@ void Console_WriteF(Console *console, int y, int x, int colorPair, int attribute
 
 void Console_WriteW(Console *console, int y, int x, wchar_t *wstr, int colorPair, int attributes)
 {
+    for(int i = 0; i < wcslen(wstr); i++)
+        Console_SetCharW(console, y, x + i, wstr[i], colorPair, attributes);
+
+    /*
     chtype color = COLOR_PAIR(colorPair);
 
     attron(color | attributes);
     mvwaddwstr(console->window, y, x, wstr);
     attroff(color | attributes);
+    */
 }
 
 void Console_WriteWF(Console *console, int y, int x, int colorPair, int attributes, const wchar_t *wfmt, ...)

@@ -118,13 +118,10 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
 
     if(hasView)
     {
-        mapObject->view = malloc(sizeof(MapObjectView) * (map->size.width * map->size.height));
+        mapObject->view = malloc(sizeof(int) * (map->size.width * map->size.height));
+
         for(int i = 0; i < map->size.width * map->size.height; i++)
-        {
-            mapObject->view[i] = malloc(sizeof(MapObjectView));
-            mapObject->view[i]->state = MAPOBJECTVIEWSTATE_UNSEEN;
-            mapObject->view[i]->wchr = L' ';
-        }
+            mapObject->view[i] = MAPOBJECTVIEWSTATE_UNSEEN;
     }
 
     return mapObject;
@@ -141,14 +138,8 @@ void Map_DestroyObject(Map* map, MapObject *mapObject)
 {
     for(int i = 0; i < mapObject->objectsCount; i++)
         Map_DestroyObject(map, mapObject->objects[i]);
-
     if(mapObject->view != NULL)
-    {
-        for(int i = 0; i < map->size.width * map->size.height; i++)
-            free(mapObject->view[i]);
         free(mapObject->view);
-    }
-
     free(mapObject);
 }
 
@@ -349,45 +340,50 @@ MapTile *Map_GetTile(Map *map, Point2D point)
     return map->tiles[(point.y * map->size.width) + point.x];
 }
 
-MapTileVisual Map_GetTileVisual(Map *map, Point2D point)
+int Map_GetPointColorPair(Map *map, Point2D point)
 {
-    int colorPair = CONSOLECOLORPAIR_WHITEBLACK;
-    wchar_t wchr = L' ';
-
     MapTile *tile = Map_GetTile(map, point);
-    if(tile == NULL)
-        return (MapTileVisual){ colorPair, wchr };
+    if(tile == NULL) return CONSOLECOLORPAIR_WHITEBLACK;
 
     if(tile->objectsCount > 0)
-    {
-        colorPair = tile->objects[0]->colorPair;
-        wchr = tile->objects[0]->wchr;
-    }
-    else
-    {
-        //░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀
+        return tile->objects[0]->colorPair;
+    
+    return CONSOLECOLORPAIR_WHITEBLACK;
+}
 
-        if(tile->type == MAPTILETYPE_FLOOR)
-            wchr = (Map_GetRoomIndexContaining(map, (Point2D){ point.x, point.y }) > -1) ? L'.' : L'▒';
-        if(tile->type == MAPTILETYPE_WALL)
-        {
-            //wchr = L'▓';
-            if(map->tiles[((point.y + 1) * map->size.width) + (point.x + 1)]->type == MAPTILETYPE_FLOOR && Map_GetRoomIndexContaining(map, (Point2D){ point.x + 1, point.y + 1 }) > -1)
-                wchr = L'┌';
-            if(map->tiles[((point.y + 1) * map->size.width) + (point.x - 1)]->type == MAPTILETYPE_FLOOR && Map_GetRoomIndexContaining(map, (Point2D){ point.x - 1, point.y + 1 }) > -1)
-                wchr = L'┐';
-            if(map->tiles[((point.y - 1) * map->size.width) + (point.x + 1)]->type == MAPTILETYPE_FLOOR && Map_GetRoomIndexContaining(map, (Point2D){ point.x + 1, point.y - 1 }) > -1)
-                wchr = L'└';
-            if(map->tiles[((point.y - 1) * map->size.width) + (point.x - 1)]->type == MAPTILETYPE_FLOOR && Map_GetRoomIndexContaining(map, (Point2D){ point.x - 1, point.y - 1 }) > -1)
-                wchr = L'┘';
-            if((map->tiles[(point.y * map->size.width) + (point.x - 1)]->type == MAPTILETYPE_FLOOR && Map_GetRoomIndexContaining(map, (Point2D){ point.x - 1, point.y }) > -1) || (map->tiles[(point.y * map->size.width) + (point.x + 1)]->type == MAPTILETYPE_FLOOR && Map_GetRoomIndexContaining(map, (Point2D){ point.x + 1, point.y }) > -1))
-                wchr = L'│';
-            if((map->tiles[((point.y - 1) * map->size.width) + point.x]->type == MAPTILETYPE_FLOOR && Map_GetRoomIndexContaining(map, (Point2D){ point.x , point.y - 1 }) > -1) || (map->tiles[((point.y + 1) * map->size.width) + point.x]->type == MAPTILETYPE_FLOOR && Map_GetRoomIndexContaining(map, (Point2D){ point.x , point.y + 1 }) > -1))
-                wchr = L'─';
-        }
+wchar_t Map_GetPointWChr(Map *map, Point2D point)
+{
+    MapTile *tile = Map_GetTile(map, point);
+    if(tile == NULL) return L' ';
+
+    if(tile->objectsCount > 0)
+        return tile->objects[0]->wchr;
+    
+    //░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀
+
+    if(tile->type == MAPTILETYPE_FLOOR)
+        return (Map_GetRoomIndexContaining(map, (Point2D){ point.x, point.y }) > -1) ? L'.' : L'▒';
+    if(tile->type == MAPTILETYPE_WALL)
+    {
+        wchar_t wchr = L' ';
+
+        if(map->tiles[((point.y + 1) * map->size.width) + (point.x + 1)]->type == MAPTILETYPE_FLOOR && Map_GetRoomIndexContaining(map, (Point2D){ point.x + 1, point.y + 1 }) > -1)
+            wchr = L'┌';
+        if(map->tiles[((point.y + 1) * map->size.width) + (point.x - 1)]->type == MAPTILETYPE_FLOOR && Map_GetRoomIndexContaining(map, (Point2D){ point.x - 1, point.y + 1 }) > -1)
+            wchr = L'┐';
+        if(map->tiles[((point.y - 1) * map->size.width) + (point.x + 1)]->type == MAPTILETYPE_FLOOR && Map_GetRoomIndexContaining(map, (Point2D){ point.x + 1, point.y - 1 }) > -1)
+            wchr = L'└';
+        if(map->tiles[((point.y - 1) * map->size.width) + (point.x - 1)]->type == MAPTILETYPE_FLOOR && Map_GetRoomIndexContaining(map, (Point2D){ point.x - 1, point.y - 1 }) > -1)
+            wchr = L'┘';
+        if((map->tiles[(point.y * map->size.width) + (point.x - 1)]->type == MAPTILETYPE_FLOOR && Map_GetRoomIndexContaining(map, (Point2D){ point.x - 1, point.y }) > -1) || (map->tiles[(point.y * map->size.width) + (point.x + 1)]->type == MAPTILETYPE_FLOOR && Map_GetRoomIndexContaining(map, (Point2D){ point.x + 1, point.y }) > -1))
+            wchr = L'│';
+        if((map->tiles[((point.y - 1) * map->size.width) + point.x]->type == MAPTILETYPE_FLOOR && Map_GetRoomIndexContaining(map, (Point2D){ point.x , point.y - 1 }) > -1) || (map->tiles[((point.y + 1) * map->size.width) + point.x]->type == MAPTILETYPE_FLOOR && Map_GetRoomIndexContaining(map, (Point2D){ point.x , point.y + 1 }) > -1))
+            wchr = L'─';
+
+        return wchr;
     }
 
-    return (MapTileVisual){ colorPair, wchr };
+    return L' ';
 }
 
 MapObjectAction *Map_MapObjectAttemptActionAsTarget(Map *map, MapObject *mapObject, MapObjectAction *action)
@@ -482,13 +478,11 @@ void Map_Render(Map *map, MapObject *viewer, Console *console)
 
 void Map_RenderRect(Map *map, MapObject *viewer, Console *console, Rect2D rect)
 {
-    if(viewer->view == NULL) return;
-
     for(int y = 0; y < map->size.height; y++)
     {
         for(int x = 0; x < map->size.width; x++)
         {
-            if(x < rect.position.x || y < rect.position.y || x > rect.position.x + rect.size.width || y > rect.position.y + rect.size.height)
+            if(x < rect.position.x || y < rect.position.y || x >= rect.position.x + rect.size.width || y >= rect.position.y + rect.size.height)
                 continue;
 
             Point2D mapPoint = (Point2D){ x, y };
@@ -499,21 +493,21 @@ void Map_RenderRect(Map *map, MapObject *viewer, Console *console, Rect2D rect)
 
             if(x > 0 && y > 0 && x < map->size.width - 1 && y < map->size.height - 1)
             {
-                MapObjectView *view = viewer->view[(y * map->size.width) + x];
+                int view = viewer->view[(y * map->size.width) + x];
                 
-                if(view->state == MAPOBJECTVIEWSTATE_VISIBLE)
+                if(view == MAPOBJECTVIEWSTATE_VISIBLE)
                 {
-                    MapTileVisual visual = Map_GetTileVisual(map, mapPoint);
-                    colorPair = visual.colorPair;
-                    wchr = visual.wchr;
+                    colorPair = Map_GetPointColorPair(map, mapPoint);
+                    wchr = Map_GetPointWChr(map, mapPoint);
                 }
                 else
                 {
-                    if(view->state == MAPOBJECTVIEWSTATE_SEEN)
+                    if(view == MAPOBJECTVIEWSTATE_SEEN)
                     {
-                        //wchr = view->wchr;
-                        //if(wchr == L'.') wchr = L' ';
-                        //if(wchr == L'▒') wchr = L'░';
+                        if(tile->type == MAPTILETYPE_FLOOR)
+                            wchr = (Map_GetRoomIndexContaining(map, mapPoint) > -1) ? L' ' : L'░';
+                        if(tile->type == MAPTILETYPE_WALL)
+                            wchr = Map_GetPointWChr(map, mapPoint);
                     }
                 }
             }
@@ -526,24 +520,22 @@ void Map_RenderRect(Map *map, MapObject *viewer, Console *console, Rect2D rect)
 
 void Map_ResetObjectView(Map* map, MapObject *mapObject)
 {
-    if(mapObject->view == NULL) return;
+    if(!(mapObject->flags & MAPOBJECTFLAG_ISLIVING)) return;
 
     for(int i = 0; i < map->size.width * map->size.height; i++)
-    {
-        mapObject->view[i]->state = MAPOBJECTVIEWSTATE_UNSEEN;
-        mapObject->view[i]->wchr = L' ';
-    }
+        mapObject->view[i] = MAPOBJECTVIEWSTATE_UNSEEN;
 }
 
 void Map_UpdateObjectView(Map* map, MapObject *mapObject)
 {
-    if(mapObject->view == NULL) return;
+    if(!(mapObject->flags & MAPOBJECTFLAG_ISLIVING)) return;
 
     for(int i = 0; i < map->size.width * map->size.height; i++)
     {
-        if(mapObject->view[i]->state != MAPOBJECTVIEWSTATE_VISIBLE)
+        if(mapObject->view[i] != MAPOBJECTVIEWSTATE_VISIBLE)
             continue;
-        mapObject->view[i]->state = MAPOBJECTVIEWSTATE_SEEN;
+
+        mapObject->view[i] = MAPOBJECTVIEWSTATE_SEEN;
     }
 
     int viewLength = (Map_GetRoomIndexContaining(map, mapObject->position) > -1) ? 10 : 2;
@@ -556,10 +548,7 @@ void Map_UpdateObjectView(Map* map, MapObject *mapObject)
             MapTile *tile = Map_GetTile(map, point);
             if(tile == NULL) break;
 
-            MapObjectView *view = mapObject->view[(point.y * map->size.width) + point.x];
-            view->state = MAPOBJECTVIEWSTATE_VISIBLE;
-            MapTileVisual visual = Map_GetTileVisual(map, point);
-            view->wchr = visual.wchr;
+            mapObject->view[(point.y * map->size.width) + point.x] = MAPOBJECTVIEWSTATE_VISIBLE;
 
             if(!(tile->passable & MAPTILEPASSABLE_LIGHT)) break;
         }

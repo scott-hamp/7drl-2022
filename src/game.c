@@ -116,10 +116,6 @@ void Game_HandleInput(Game *game)
 
         Map_UpdateObjectView(game->map, game->map->player);
 
-        Rect2D rect;
-        rect.position = (Point2D){ game->map->player->position.x - 5, game->map->player->position.y - 5 };
-        rect.size = (Size2D){ 10, 10 };
-
         Map_Render(game->map, game->map->player, game->console);
 
         Game_RenderUI(game);
