@@ -1,9 +1,17 @@
 BUILD = linux
 # BUILD = { linux, win64 }
 # BUILDINDEX = { 0: linux, 1: win64 }
+CURSES = ncursesw
+# CURSES = { ncursesw, pdcurses }
 RELEASE = 0
 
 WIN64 = x86_64-w64-mingw32
+
+ifeq ($(CURSES),ncursesw)
+	CURSESINDEX = 0
+else
+	CURSESINDEX = 1
+endif
 
 ifeq ($(BUILD),linux)
 	CC = gcc
@@ -14,13 +22,18 @@ endif
 ifeq ($(BUILD),linux)
 	CXXFLAGS = -std=c17 -w -DBUILDINDEX=0
 else
-	CXXFLAGS = -std=c17 -w -DBUILDINDEX=1 -I$(WIN64)/ncursesw/include -L$(WIN64)/ncursesw/lib
+	INCLUDELINK = -I$(WIN64)/$(CURSES)/include -L$(WIN64)/$(CURSES)/lib
+	ifeq ($(CURSES),ncursesw)
+		CXXFLAGS = -std=c17 -w -DBUILDINDEX=1 -DCURSESINDEX=0 ${INCLUDELINK}
+	else
+		CXXFLAGS = -std=c17 -w -mwindows -DBUILDINDEX=1 -DCURSESINDEX=1 ${INCLUDELINK}
+	endif
 endif
 
 ifeq ($(BUILD),linux)
 	LDFLAGS = -lncursesw -lm
 else
-	LDFLAGS = -lncursesw -lm
+	LDFLAGS = -l$(CURSES) -lm
 endif
 
 PROJECTNAME = 7drl-2022
@@ -33,7 +46,7 @@ else
 	ifeq ($(BUILD),linux)
 		APPNAME = release/linux/$(APPNAMESELF)_linux/$(APPNAMESELF)_linux
 	else
-		APPNAME = release/win64/$(APPNAMESELF)_win64/$(APPNAMESELF)_win64
+		APPNAME = release/win64/$(APPNAMESELF)_win64/$(APPNAMESELF)_win64_${CURSES}
 	endif
 endif
 

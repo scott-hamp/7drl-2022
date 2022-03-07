@@ -7,9 +7,12 @@
     #define _XOPEN_SOURCE_EXTENDED
     #include <ncursesw/curses.h>
 #else
-    //#define PDC_DLL_BUILD
-    //#include <curses.h>
-    #include <ncursesw/curses.h>
+    #if CURSESINDEX == 0
+        #include <ncursesw/curses.h>
+    #else
+        #define PDC_DLL_BUILD
+        #include <curses.h>
+    #endif
 #endif
 
 #include "geometry.h"
