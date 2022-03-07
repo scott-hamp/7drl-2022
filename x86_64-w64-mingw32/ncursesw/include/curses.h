@@ -58,7 +58,7 @@
 /*
  * Definitions to facilitate DLL's.
  */
-#include <ncursesw/ncurses_dll.h>
+#include <ncurses_dll.h>
 
 #if 1
 #include <stdint.h>
@@ -2092,7 +2092,7 @@ extern NCURSES_EXPORT(const char *) _nc_visbuf (const char *);
 
 extern NCURSES_EXPORT(void) exit_curses (int) GCC_NORETURN;
 
-#include <ncursesw/unctrl.h>
+#include <unctrl.h>
 
 #ifdef __cplusplus
 

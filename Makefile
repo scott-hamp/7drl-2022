@@ -1,7 +1,7 @@
 BUILD = linux
 # BUILD = { linux, win64 }
 # BUILDINDEX = { 0: linux, 1: win64 }
-CURSES = ncursesw
+CURSES = pdcurses
 # CURSES = { ncursesw, pdcurses }
 RELEASE = 0
 
