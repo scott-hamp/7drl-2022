@@ -17,10 +17,12 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
         {
             if(tile->objectsCount > 0)
             {
-                if(tile->objects[0]->flags & MAPOBJECTFLAG_CANOPEN)
+                for(int i = 0; i < tile->objectsCount; i++)
                 {
+                    if(!(tile->objects[i]->flags & MAPOBJECTFLAG_CANOPEN)) continue;
+                    
                     action->type = MAPOBJECTACTIONTYPE_OPEN;
-                    action->target = tile->objects[0];
+                    action->target = tile->objects[i];
                     action->to = action->target->position;
                     return Map_AttemptObjectAction(map, action);
                 }
@@ -38,7 +40,7 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
 
     if(action->type == MAPOBJECTACTIONTYPE_OPEN)
     {
-        action = Map_MapObjectAttemptActionAsTarget(map, action->target, action);
+        action = Map_ObjectAttemptActionAsTarget(map, action->target, action);
         return action;
     }
 
@@ -73,6 +75,8 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
 
     if(id == MAPOBJECTID_PLAYER) // Player
     {
+        mapObject->description = "Yourself.";
+        mapObject->layer = 1;
         mapObject->name = "Player";
         mapObject->flags |= (MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLAYER);
         mapObject->hp = 10;
@@ -88,6 +92,8 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
 
     if(id == MAPOBJECTID_DOOR) // Door
     {
+        mapObject->description = "A door.";
+        mapObject->layer = 2;
         mapObject->name = "door";
         mapObject->flags |= (MAPOBJECTFLAG_CANOPEN | MAPOBJECTFLAG_BLOCKSGAS | MAPOBJECTFLAG_BLOCKSLIGHT | MAPOBJECTFLAG_BLOCKSLIQUID | MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_PLACEINDOORWAYS);
         mapObject->wchr = L'+';
@@ -96,7 +102,9 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
 
     if(id == MAPOBJECTID_WATER) // Water
     {
+        mapObject->description = "Water.";
         mapObject->colorPair = CONSOLECOLORPAIR_CYANBLACK;
+        mapObject->layer = 3;
         mapObject->name = "water";
         mapObject->flags |= MAPOBJECTFLAG_ISLIQUID;
         mapObject->turnTicks = 2;
@@ -107,7 +115,9 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
 
     if(id == MAPOBJECTID_WATERSOURCE) // Water source
     {
+        mapObject->description = "A hole in the ship.";
         mapObject->colorPair = CONSOLECOLORPAIR_CYANBLACK;
+        mapObject->layer = 4;
         mapObject->name = "water source";
         mapObject->flags |= MAPOBJECTFLAG_ISLIQUIDSOURCE;
         mapObject->turnTicks = 5;
@@ -121,7 +131,7 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->view = malloc(sizeof(int) * (map->size.width * map->size.height));
 
         for(int i = 0; i < map->size.width * map->size.height; i++)
-            mapObject->view[i] = MAPOBJECTVIEWSTATE_UNSEEN;
+            mapObject->view[i] = MAPOBJECTVIEW_UNSEEN;
     }
 
     return mapObject;
@@ -320,24 +330,13 @@ void Map_Generate(Map *map)
         Map_PlaceObject(map, Map_CreateObject(map, MAPOBJECTID_DOOR));
 }
 
-int Map_GetRoomIndexContaining(Map *map, Point2D point)
+int Map_GetObjectView(Map *map, MapObject *mapObject, Point2D point)
 {
-    for(int i = 0; i < map->roomsCount; i++)
-    {
-        if(point.x < map->rooms[i]->position.x || point.y < map->rooms[i]->position.y || point.x >= map->rooms[i]->position.x + map->rooms[i]->size.width || point.y >= map->rooms[i]->position.y + map->rooms[i]->size.height)
-            continue;
-        return i;
-    }
-
-    return -1;
-}
-
-MapTile *Map_GetTile(Map *map, Point2D point)
-{
+    if(mapObject->view == NULL) return MAPOBJECTVIEW_UNSEEN;
     if(point.x < 0 || point.y < 0 || point.x >= map->size.width || point.y >= map->size.height)
-        return NULL;
+        return MAPOBJECTVIEW_UNSEEN;
 
-    return map->tiles[(point.y * map->size.width) + point.x];
+    return mapObject->view[(point.y * map->size.width) + point.x];
 }
 
 int Map_GetPointColorPair(Map *map, Point2D point)
@@ -346,9 +345,47 @@ int Map_GetPointColorPair(Map *map, Point2D point)
     if(tile == NULL) return CONSOLECOLORPAIR_WHITEBLACK;
 
     if(tile->objectsCount > 0)
-        return tile->objects[0]->colorPair;
+    {
+        int layer = tile->objects[0]->layer;
+        int colorPair = tile->objects[0]->colorPair;
+        for(int i = 1; i < tile->objectsCount; i++)
+        {
+            if(tile->objects[i]->layer >= layer) continue;
+            layer = tile->objects[i]->layer;
+            colorPair = tile->objects[i]->colorPair;
+        }
+
+        return colorPair;
+    }
     
     return CONSOLECOLORPAIR_WHITEBLACK;
+}
+
+char *Map_GetPointDescription(Map *map, Point2D point)
+{
+    MapTile *tile = Map_GetTile(map, point);
+    if(tile == NULL) return "Nothing";
+
+    if(tile->objectsCount > 0)
+    {
+        int layer = tile->objects[0]->layer;
+        char *desc = tile->objects[0]->description;
+        for(int i = 1; i < tile->objectsCount; i++)
+        {
+            if(tile->objects[i]->layer >= layer) continue;
+            layer = tile->objects[i]->layer;
+            desc = tile->objects[i]->description;
+        }
+
+        return desc;
+    }
+
+    if(tile->type == MAPTILETYPE_FLOOR)
+        return "The floor.";
+    if(tile->type == MAPTILETYPE_WALL)
+        return "The wall.";
+
+    return "Nothing";
 }
 
 wchar_t Map_GetPointWChr(Map *map, Point2D point)
@@ -357,7 +394,18 @@ wchar_t Map_GetPointWChr(Map *map, Point2D point)
     if(tile == NULL) return L' ';
 
     if(tile->objectsCount > 0)
-        return tile->objects[0]->wchr;
+    {
+        int layer = tile->objects[0]->layer;
+        wchar_t wchr = tile->objects[0]->wchr;
+        for(int i = 1; i < tile->objectsCount; i++)
+        {
+            if(tile->objects[i]->layer >= layer) continue;
+            layer = tile->objects[i]->layer;
+            wchr = tile->objects[i]->wchr;
+        }
+
+        return wchr;
+    }
     
     //░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀
 
@@ -386,7 +434,38 @@ wchar_t Map_GetPointWChr(Map *map, Point2D point)
     return L' ';
 }
 
-MapObjectAction *Map_MapObjectAttemptActionAsTarget(Map *map, MapObject *mapObject, MapObjectAction *action)
+int Map_GetRoomIndexContaining(Map *map, Point2D point)
+{
+    for(int i = 0; i < map->roomsCount; i++)
+    {
+        if(point.x < map->rooms[i]->position.x || point.y < map->rooms[i]->position.y || point.x >= map->rooms[i]->position.x + map->rooms[i]->size.width || point.y >= map->rooms[i]->position.y + map->rooms[i]->size.height)
+            continue;
+        return i;
+    }
+
+    return -1;
+}
+
+MapTile *Map_GetTile(Map *map, Point2D point)
+{
+    if(point.x < 0 || point.y < 0 || point.x >= map->size.width || point.y >= map->size.height)
+        return NULL;
+
+    return map->tiles[(point.y * map->size.width) + point.x];
+}
+
+void Map_MoveObject(Map *map, MapObject *mapObject, Point2D to)
+{
+    MapTile *tileFrom = Map_GetTile(map, mapObject->position);
+    MapTile *tileTo = Map_GetTile(map, to);
+    if(tileFrom == NULL || tileTo == NULL) return;
+
+    MapTile_RemoveObject(tileFrom, mapObject);
+    mapObject->position = to;
+    MapTile_AddObject(tileTo, mapObject);
+}
+
+MapObjectAction *Map_ObjectAttemptActionAsTarget(Map *map, MapObject *mapObject, MapObjectAction *action)
 {
     if(action->target != mapObject) return action;
 
@@ -410,17 +489,6 @@ MapObjectAction *Map_MapObjectAttemptActionAsTarget(Map *map, MapObject *mapObje
     }
 
     return action;
-}
-
-void Map_MoveObject(Map *map, MapObject *mapObject, Point2D to)
-{
-    MapTile *tileFrom = Map_GetTile(map, mapObject->position);
-    MapTile *tileTo = Map_GetTile(map, to);
-    if(tileFrom == NULL || tileTo == NULL) return;
-
-    MapTile_RemoveObject(tileFrom, mapObject);
-    mapObject->position = to;
-    MapTile_AddObject(tileTo, mapObject);
 }
 
 void Map_PlaceObject(Map *map, MapObject *mapObject)
@@ -495,14 +563,14 @@ void Map_RenderRect(Map *map, MapObject *viewer, Console *console, Rect2D rect)
             {
                 int view = viewer->view[(y * map->size.width) + x];
                 
-                if(view == MAPOBJECTVIEWSTATE_VISIBLE)
+                if(view == MAPOBJECTVIEW_VISIBLE)
                 {
                     colorPair = Map_GetPointColorPair(map, mapPoint);
                     wchr = Map_GetPointWChr(map, mapPoint);
                 }
                 else
                 {
-                    if(view == MAPOBJECTVIEWSTATE_SEEN)
+                    if(view == MAPOBJECTVIEW_SEEN)
                     {
                         if(tile->type == MAPTILETYPE_FLOOR)
                             wchr = (Map_GetRoomIndexContaining(map, mapPoint) > -1) ? L' ' : L'░';
@@ -523,7 +591,7 @@ void Map_ResetObjectView(Map* map, MapObject *mapObject)
     if(!(mapObject->flags & MAPOBJECTFLAG_ISLIVING)) return;
 
     for(int i = 0; i < map->size.width * map->size.height; i++)
-        mapObject->view[i] = MAPOBJECTVIEWSTATE_UNSEEN;
+        mapObject->view[i] = MAPOBJECTVIEW_UNSEEN;
 }
 
 void Map_UpdateObjectView(Map* map, MapObject *mapObject)
@@ -532,13 +600,13 @@ void Map_UpdateObjectView(Map* map, MapObject *mapObject)
 
     for(int i = 0; i < map->size.width * map->size.height; i++)
     {
-        if(mapObject->view[i] != MAPOBJECTVIEWSTATE_VISIBLE)
+        if(mapObject->view[i] != MAPOBJECTVIEW_VISIBLE)
             continue;
 
-        mapObject->view[i] = MAPOBJECTVIEWSTATE_SEEN;
+        mapObject->view[i] = MAPOBJECTVIEW_SEEN;
     }
 
-    int viewLength = (Map_GetRoomIndexContaining(map, mapObject->position) > -1) ? 10 : 2;
+    int viewLength = (Map_GetRoomIndexContaining(map, mapObject->position) > -1) ? 5 : 2;
 
     for(int d = 0; d < 360; d++)
     {
@@ -548,7 +616,7 @@ void Map_UpdateObjectView(Map* map, MapObject *mapObject)
             MapTile *tile = Map_GetTile(map, point);
             if(tile == NULL) break;
 
-            mapObject->view[(point.y * map->size.width) + point.x] = MAPOBJECTVIEWSTATE_VISIBLE;
+            mapObject->view[(point.y * map->size.width) + point.x] = MAPOBJECTVIEW_VISIBLE;
 
             if(!(tile->passable & MAPTILEPASSABLE_LIGHT)) break;
         }
@@ -560,8 +628,14 @@ MapObject *MapObject_Copy(MapObject *mapObject)
     MapObject *copy = MapObject_Create(mapObject->name);
 
     copy->colorPair = mapObject->colorPair;
+    copy->description = mapObject->description;
     copy->flags = mapObject->flags;
     copy->height = mapObject->height;
+    copy->hp = mapObject->hp;
+    copy->hpMax = mapObject->hpMax;
+    copy->layer = mapObject->layer;
+    copy->o2 = mapObject->o2;
+    copy->o2Max = mapObject->o2Max;
     copy->position = mapObject->position;
     copy->turnTicks = mapObject->turnTicks;
     copy->turnTicksSize = mapObject->turnTicksSize;

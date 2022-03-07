@@ -24,9 +24,9 @@
 #define MAPOBJECTFLAG_PLACEINDOORWAYS       1 << 10
 #define MAPOBJECTFLAG_PLAYER                1 << 11
 
-#define MAPOBJECTVIEWSTATE_UNSEEN   0
-#define MAPOBJECTVIEWSTATE_SEEN     1
-#define MAPOBJECTVIEWSTATE_VISIBLE  2
+#define MAPOBJECTVIEW_UNSEEN        0
+#define MAPOBJECTVIEW_SEEN          1
+#define MAPOBJECTVIEW_VISIBLE       2
 
 #define MAPTILEPASSABLE_SOLID       1 << 0
 #define MAPTILEPASSABLE_LIQUID      1 << 1
@@ -40,6 +40,7 @@
 typedef struct MapObjectAsItem
 {
     int colorPair;
+    char *description;
     uint32_t flags;
     char *name;
     wchar_t wchr, wchrAlt;
@@ -48,10 +49,12 @@ typedef struct MapObjectAsItem
 typedef struct MapObject
 {
     int colorPair;
+    char *description;
     uint32_t flags;
     int height;
     int hp, o2;
     size_t hpMax, o2Max;
+    int layer;
     char *name;
     Point2D position;
     MapObjectAsItem *objects[10];
@@ -101,12 +104,14 @@ MapObject *Map_CreateObject(Map *map, uint16_t id);
 void Map_Destroy(Map *map);
 void Map_DestroyObject(Map* map, MapObject *mapObject);
 void Map_Generate(Map *map);
+int Map_GetObjectView(Map *map, MapObject *mapObject, Point2D point);
+int Map_GetPointColorPair(Map *map, Point2D point);
+char *Map_GetPointDescription(Map *map, Point2D point);
+wchar_t Map_GetPointWChr(Map *map, Point2D point);
 int Map_GetRoomIndexContaining(Map *map, Point2D point);
 MapTile *Map_GetTile(Map *map, Point2D point);
-int Map_GetPointColorPair(Map *map, Point2D point);
-wchar_t Map_GetPointWChr(Map *map, Point2D point);
-MapObjectAction *Map_MapObjectAttemptActionAsTarget(Map *map, MapObject *mapObject, MapObjectAction *action);
 void Map_MoveObject(Map *map, MapObject *mapObject, Point2D to);
+MapObjectAction *Map_ObjectAttemptActionAsTarget(Map *map, MapObject *mapObject, MapObjectAction *action);
 void Map_PlaceObject(Map *map, MapObject *mapObject);
 void Map_Render(Map *map, MapObject *viewer, Console *console);
 void Map_RenderRect(Map *map, MapObject *viewer, Console *console, Rect2D rect);

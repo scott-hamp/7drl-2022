@@ -4,9 +4,10 @@ Game *Game_Create(Console *console)
 {
     Game *game = malloc(sizeof(Game));
     game->active = true;
+    game->commandActive = -1;
     game->console = console;
     game->map = Map_Create((Size2D){ 80, 20 }, (Point2D){ 0, 0 });
-    game->screen = 0;
+    game->screen = SCREEN_TITLE;
     game->turn = 1;
 
     Console_SetCursor(game->console, 1);
@@ -63,7 +64,7 @@ void Game_HandleInput(Game *game)
 {
     game->key = Console_Getch(game->console);
 
-    if(game->screen == 0)
+    if(game->screen == SCREEN_TITLE)
     {
         Map_Generate(game->map);
         Game_Log(game, "The ship teeters on the brink...", CONSOLECOLORPAIR_WHITEBLACK, 0);
@@ -76,11 +77,11 @@ void Game_HandleInput(Game *game)
         Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->map->player->position.x, game->map->renderOffset.y + game->map->player->position.y });
         Console_Refresh(game->console);
 
-        game->screen = 1;
+        game->screen = SCREEN_MAIN;
         return;
     }
 
-    if(game->screen == 1)
+    if(game->screen == SCREEN_MAIN)
     {
         if(!(game->map->player->flags & MAPOBJECTFLAG_ISLIVING))
         {
@@ -89,36 +90,152 @@ void Game_HandleInput(Game *game)
         }
 
         Direction2D direction = Game_GetInputDirection(game, game->key);
-        if(direction.x != 0 || direction.y != 0)
+
+        if(game->commandActive > -1)
         {
-            MapObjectAction *action = MapObjectAction_Create(MAPOBJECTACTIONTYPE_MOVE);
-            action->direction = direction;
-            action->object = game->map->player;
-
-            action = Map_AttemptObjectAction(game->map, action);
-
-            if(action->result)
+            if(game->key == 27) // Esc.
             {
-                Game_MapNextTurn(game, game->map);
+                game->commandActive = -1;
+                Game_Log(game, "Nevermind.", CONSOLECOLORPAIR_WHITEBLACK, 0);
 
-                if(action->type == MAPOBJECTACTIONTYPE_OPEN)
-                    Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "You open the %s.", action->target->name);
+                Game_RenderUI(game);
+                Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->map->player->position.x, game->map->renderOffset.y + game->map->player->position.y });
+                Console_Refresh(game->console);
+                return;
             }
 
-            MapObjectAction_Destroy(action);
+            if(game->commandActive == COMMAND_LOOK)
+            {
+                if(direction.x == 0 && direction.y == 0) return;
+                
+                Point2D to = (Point2D){ game->commandPoint.x + direction.x, game->commandPoint.y + direction.y };
+
+                int view = Map_GetObjectView(game->map, game->map->player, to);
+                if(view != MAPOBJECTVIEW_VISIBLE) return;
+
+                game->commandPoint = to;
+                char *desc = Map_GetPointDescription(game->map, to);
+                Game_LogChangeF(game, CONSOLECOLORPAIR_YELLOWBLACK, 0, "Look at what? - %s", desc);
+
+                Game_RenderUI(game);
+                Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->commandPoint.x, game->map->renderOffset.y + game->commandPoint.y });
+                Console_Refresh(game->console);
+                return;
+            }
+
+            if(game->commandActive == COMMAND_OPENCLOSE)
+            {
+                if(direction.x == 0 && direction.y == 0) return;
+                
+                Point2D to = (Point2D){ game->map->player->position.x + direction.x, game->map->player->position.y + direction.y };
+
+                int view = Map_GetObjectView(game->map, game->map->player, to);
+                if(view != MAPOBJECTVIEW_VISIBLE) return;
+                MapTile *tile = Map_GetTile(game->map, to);
+                if(tile == NULL) return;
+
+                if(tile->objectsCount == 0)
+                {
+                    Game_Log(game, "There's nothing to open or close there.", CONSOLECOLORPAIR_WHITEBLACK, 0);
+                    Game_RenderUI(game);
+                    Console_Refresh(game->console);
+                    return;
+                }
+
+                MapObject *toOpenClose = NULL;
+                for(int i = 0; i < tile->objectsCount; i++)
+                {
+                    if(!(tile->objects[i]->flags & MAPOBJECTFLAG_CANOPEN)) continue;
+
+                    toOpenClose = tile->objects[i];
+                    break;
+                }
+
+                if(toOpenClose == NULL)
+                {
+                    Game_Log(game, "That can't be opened or closed.", CONSOLECOLORPAIR_WHITEBLACK, 0);
+                    Game_RenderUI(game);
+                    Console_Refresh(game->console);
+                    return;
+                }
+
+                MapObjectAction *action = MapObjectAction_Create(MAPOBJECTACTIONTYPE_OPEN);
+                action->target = toOpenClose;
+                action->to = to;
+
+                action = Map_ObjectAttemptActionAsTarget(game->map, toOpenClose, action);
+                if(!action->result)
+                {
+                    Game_Log(game, "That can't be opened or closed.", CONSOLECOLORPAIR_WHITEBLACK, 0);
+                    Game_RenderUI(game);
+                    Console_Refresh(game->console);
+                    return;
+                }
+
+                if(toOpenClose->flags & MAPOBJECTFLAG_ISOPEN)
+                    Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "You open the %s.", toOpenClose->name);
+                else
+                    Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "You close the %s.", toOpenClose->name);
+            
+                game->commandActive = -1;
+            }
         }
         else
         {
-            // Wait
-            if(game->key == 46 || game->key == 53)
-                Game_MapNextTurn(game, game->map);
+
+            if(game->key == 111) // 'O' == Open / Close
+            {
+                game->commandActive = COMMAND_OPENCLOSE;
+                Game_Log(game, "Open / close in which direction?", CONSOLECOLORPAIR_YELLOWBLACK, 0);
+
+                Game_RenderUI(game);
+                Console_Refresh(game->console);
+                return;
+            }
+
+            if(game->key == 120) // 'X' == Look
+            {
+                game->commandActive = COMMAND_LOOK;
+                Game_Log(game, "Look at what? - Yourself.", CONSOLECOLORPAIR_YELLOWBLACK, 0);
+                game->commandPoint = (Point2D){ game->map->player->position.x, game->map->player->position.y };
+
+                Game_RenderUI(game);
+                Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->commandPoint.x, game->map->renderOffset.y + game->commandPoint.y });
+                Console_Refresh(game->console);
+                return;
+            }
+        
+            if(direction.x != 0 || direction.y != 0)
+            {
+                MapObjectAction *action = MapObjectAction_Create(MAPOBJECTACTIONTYPE_MOVE);
+                action->direction = direction;
+                action->object = game->map->player;
+
+                action = Map_AttemptObjectAction(game->map, action);
+
+                if(action->result)
+                {
+                    Game_MapNextTurn(game, game->map);
+
+                    if(action->type == MAPOBJECTACTIONTYPE_OPEN)
+                        Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "You open the %s.", action->target->name);
+                }
+
+                MapObjectAction_Destroy(action);
+            }
+            else
+            {
+                // Wait
+                if(game->key == 46 || game->key == 53)
+                    Game_MapNextTurn(game, game->map);
+            }
         }
 
         Map_UpdateObjectView(game->map, game->map->player);
 
         Rect2D rect;
-        rect.position = (Point2D){ game->map->player->position.x - 5, game->map->player->position.y - 5 };
-        rect.size = (Size2D){ 10, 10 };
+        rect.position = (Point2D){ game->map->player->position.x - 10, game->map->player->position.y - 10 };
+        rect.size = (Size2D){ 20, 20 };
         Map_RenderRect(game->map, game->map->player, game->console, rect);
 
         Game_RenderUI(game);
@@ -141,6 +258,33 @@ void Game_Log(Game *game, char *str, int colorPair, int attributes)
 
     game->log[game->logSize] = logMessage;
     game->logSize++;
+}
+
+void Game_LogChange(Game *game, char *str, int colorPair, int attributes)
+{
+    if(game->logSize == 0) return;
+
+    LogMessage *logMessage = game->log[game->logSize - 1];
+    logMessage->attributes = attributes;
+    logMessage->colorPair = colorPair;
+    free(logMessage->str);
+    logMessage->str = malloc(sizeof(char) * (strlen(str) + 1));
+    memset(logMessage->str, 0, strlen(str) + 1);
+    strncpy(logMessage->str, str, strlen(str));
+}
+
+void Game_LogChangeF(Game *game, int colorPair, int attributes, const char *fmt, ...)
+{
+    va_list args;        
+    va_start(args, fmt);
+
+    char str[256];
+    memset(str, 0, 256);
+    vsnprintf(str, 256, fmt, args);
+
+    Game_LogChange(game, str, colorPair, attributes);
+
+    va_end(args);
 }
 
 void Game_LogF(Game *game, int colorPair, int attributes, const char *fmt, ...)

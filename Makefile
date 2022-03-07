@@ -20,13 +20,13 @@ else
 endif
 
 ifeq ($(BUILD),linux)
-	CXXFLAGS = -std=c17 -w -DBUILDINDEX=0
+	CXXFLAGS = -std=c17 -w -DBUILDINDEX=0 -DRELEASE=${RELEASE}
 else
 	INCLUDELINK = -I$(WIN64)/$(CURSES)/include -L$(WIN64)/$(CURSES)/lib
 	ifeq ($(CURSES),ncursesw)
-		CXXFLAGS = -std=c17 -w -DBUILDINDEX=1 -DCURSESINDEX=0 ${INCLUDELINK}
+		CXXFLAGS = -std=c17 -w -DBUILDINDEX=1 -DCURSESINDEX=0 -DRELEASE=${RELEASE} ${INCLUDELINK}
 	else
-		CXXFLAGS = -std=c17 -w -mwindows -DBUILDINDEX=1 -DCURSESINDEX=1 ${INCLUDELINK}
+		CXXFLAGS = -std=c17 -w -mwindows -DBUILDINDEX=1 -DCURSESINDEX=1 -DRELEASE=${RELEASE} ${INCLUDELINK}
 	endif
 endif
 
@@ -44,9 +44,9 @@ ifeq ($(RELEASE),0)
 	APPNAME = debug/app
 else
 	ifeq ($(BUILD),linux)
-		APPNAME = release/linux/$(APPNAMESELF)_linux/$(APPNAMESELF)_linux
+		APPNAME = release/linux/$(APPNAMESELF)_linux
 	else
-		APPNAME = release/win64/$(APPNAMESELF)_win64/$(APPNAMESELF)_win64_${CURSES}
+		APPNAME = release/win64/$(APPNAMESELF)_win64_${CURSES}
 	endif
 endif
 
