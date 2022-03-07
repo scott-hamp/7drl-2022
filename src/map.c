@@ -606,6 +606,31 @@ void Map_UpdateObjectView(Map* map, MapObject *mapObject)
         mapObject->view[i] = MAPOBJECTVIEW_SEEN;
     }
 
+    Rect2D viewRect;
+    int ric = Map_GetRoomIndexContaining(map, mapObject->position);
+
+    if(ric > -1)
+    {
+        viewRect.position = (Point2D){ map->rooms[ric]->position.x - 1, map->rooms[ric]->position.y - 1 };
+        viewRect.size = (Size2D){ map->rooms[ric]->size.width + 2, map->rooms[ric]->size.height + 2 };
+    }
+    else
+    {
+        viewRect.position.x = mapObject->position.x - 1;
+        viewRect.position.y = mapObject->position.y - 1;
+        viewRect.size = (Size2D){ 3, 3 };
+    }
+
+    for(int y = 0; y < viewRect.size.height; y++)
+    {
+        for(int x = 0; x < viewRect.size.width; x++)
+        {
+            Point2D point = (Point2D){viewRect.position.x + x, viewRect.position.y + y};
+            mapObject->view[(point.y * map->size.width) + point.x] = MAPOBJECTVIEW_VISIBLE;
+        }
+    }
+
+    /*
     int viewLength = (Map_GetRoomIndexContaining(map, mapObject->position) > -1) ? 5 : 2;
 
     for(int d = 0; d < 360; d++)
@@ -621,6 +646,7 @@ void Map_UpdateObjectView(Map* map, MapObject *mapObject)
             if(!(tile->passable & MAPTILEPASSABLE_LIGHT)) break;
         }
     }
+    */
 }
 
 MapObject *MapObject_Copy(MapObject *mapObject)
