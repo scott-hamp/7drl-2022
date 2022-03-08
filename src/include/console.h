@@ -7,7 +7,7 @@
     #define _XOPEN_SOURCE_EXTENDED
     #include <ncursesw/curses.h>
 #else
-    #if CURSESINDEX == 1
+    #if CURSESINDEX == 2
         #define PDC_DLL_BUILD
     #endif
     #include <curses.h>

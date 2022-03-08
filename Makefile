@@ -2,15 +2,19 @@ BUILD = linux
 # BUILD = { linux, win64 }
 # BUILDINDEX = { 0: linux, 1: win64 }
 CURSES = pdcurses
-# CURSES = { ncursesw, pdcurses }
+# CURSES = { ncurses, ncursesw, pdcurses }
 RELEASE = 0
 
 WIN64 = x86_64-w64-mingw32
 
-ifeq ($(CURSES),ncursesw)
+ifeq ($(CURSES),ncurses)
 	CURSESINDEX = 0
 else
-	CURSESINDEX = 1
+	ifeq ($(CURSES),ncursesw)
+		CURSESINDEX = 1
+	else
+		CURSESINDEX = 2
+	endif
 endif
 
 ifeq ($(BUILD),linux)
@@ -23,10 +27,14 @@ ifeq ($(BUILD),linux)
 	CXXFLAGS = -std=c17 -w -DBUILDINDEX=0 -DRELEASE=${RELEASE}
 else
 	INCLUDELINK = -I$(WIN64)/$(CURSES)/include -L$(WIN64)/$(CURSES)/lib
-	ifeq ($(CURSES),ncursesw)
+	ifeq ($(CURSES),ncurses)
 		CXXFLAGS = -std=c17 -w -DBUILDINDEX=1 -DCURSESINDEX=0 -DRELEASE=${RELEASE} ${INCLUDELINK}
 	else
-		CXXFLAGS = -std=c17 -w -mwindows -DBUILDINDEX=1 -DCURSESINDEX=1 -DRELEASE=${RELEASE} ${INCLUDELINK}
+		ifeq ($(CURSES),ncursesw)
+			CXXFLAGS = -std=c17 -w -DBUILDINDEX=1 -DCURSESINDEX=1 -DRELEASE=${RELEASE} ${INCLUDELINK}
+		else
+			CXXFLAGS = -std=c17 -w -mwindows -DBUILDINDEX=1 -DCURSESINDEX=2 -DRELEASE=${RELEASE} ${INCLUDELINK}
+		endif
 	endif
 endif
 
