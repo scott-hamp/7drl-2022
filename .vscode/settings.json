@@ -20,6 +20,8 @@
         "string_view": "c",
         "curses.h": "c",
         "xstring": "c",
-        "xutility": "c"
+        "xutility": "c",
+        "windows.h": "c",
+        "stdint.h": "c"
     }
 }
