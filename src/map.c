@@ -45,15 +45,63 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
         return action;
     }
 
+    if(action->type == MAPOBJECTACTIONTYPE_USESTAIRS)
+    {
+        MapTile *tile = Map_GetTile(map, action->object->position);
+        if(tile->objectsCount == 0) return action;
+
+        MapObject *stairs = MapTile_GetObjectWithFlags(tile, MAPOBJECTFLAG_STAIRS);
+        if(stairs == NULL) return action;
+
+        action->result = true;
+        if(action->object != map->player) return action;
+
+        map->level++;
+        MapTile_RemoveObject(tile, map->player);
+        Map_Clear(map);
+        Map_Generate(map);
+
+        Map_ResetObjectView(map, map->player);
+        Map_PlaceObject(map, map->player);
+
+        return action;
+    }
+
     return action;
+}
+
+void Map_Clear(Map *map)
+{
+    for(int y = 0; y < map->size.height; y++)
+    {
+        for(int x = 0; x < map->size.width; x++)
+        {
+            MapTile *tile = Map_GetTile(map, (Point2D){ x, y });
+            MapTile_DestroyObjects(tile, map);
+        }
+    }
+}
+
+void Map_ClearExcludePlayer(Map *map)
+{
+    for(int y = 0; y < map->size.height; y++)
+    {
+        for(int x = 0; x < map->size.width; x++)
+        {
+            MapTile *tile = Map_GetTile(map, (Point2D){ x, y });
+            MapTile_DestroyObjectsExcludePlayer(tile, map);
+        }
+    }
 }
 
 Map *Map_Create(Size2D size, Point2D renderOffset)
 {
     Map *map = malloc(sizeof(Map));
 
+    map->level = 1;
     map->levelFloodTimer = 999;
     map->levelFloodTimerSize = 999;
+    map->player = NULL;
     map->size = size;
     map->renderOffset = renderOffset;
 
@@ -79,7 +127,7 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->description = "Yourself.";
         mapObject->layer = 1;
         mapObject->name = "Player";
-        mapObject->flags |= (MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLAYER);
+        mapObject->flags |= (MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLACEINROOM | MAPOBJECTFLAG_PLAYER);
         mapObject->hp = 10;
         mapObject->hpMax = 10;
         mapObject->o2 = 20;
@@ -127,6 +175,16 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->wchrAlt = L'○';
     }
 
+    if(id == MAPOBJECTID_STAIRS) // Stairs
+    {
+        mapObject->description = "Stairs leading upwards.";
+        mapObject->layer = 2;
+        mapObject->name = "stairs";
+        mapObject->flags |= (MAPOBJECTFLAG_PLACEINROOM | MAPOBJECTFLAG_STAIRS);
+        mapObject->wchr = L'<';
+        mapObject->wchrAlt = L'<';
+    }
+
     if(hasView)
     {
         mapObject->view = malloc(sizeof(int) * (map->size.width * map->size.height));
@@ -156,7 +214,8 @@ void Map_DestroyObject(Map* map, MapObject *mapObject)
 
 void Map_Generate(Map *map)
 {
-    map->levelFloodTimerSize = 100 + rand() % 10;
+    map->levelFloodTimerSize = (120 + rand() % 10) - (map->level * 5);
+    if(map->levelFloodTimerSize < 50) map->levelFloodTimerSize = 50;
     map->levelFloodTimer = (int)map->levelFloodTimerSize;
 
     for(int y = 0; y < map->size.height; y++)
@@ -324,11 +383,16 @@ void Map_Generate(Map *map)
         }
     }
 
-    map->player = Map_CreateObject(map, MAPOBJECTID_PLAYER);
-    Map_PlaceObject(map, map->player);
+    if(map->player == NULL)
+    {
+        map->player = Map_CreateObject(map, MAPOBJECTID_PLAYER);
+        Map_PlaceObject(map, map->player);
+    }
 
     for(int i = 0; i < 4 + rand() % 2; i++)
         Map_PlaceObject(map, Map_CreateObject(map, MAPOBJECTID_DOOR));
+
+    Map_PlaceObject(map, Map_CreateObject(map, MAPOBJECTID_STAIRS));
 }
 
 int Map_GetObjectView(Map *map, MapObject *mapObject, Point2D point)
@@ -721,6 +785,9 @@ MapObjectAction *MapObjectAction_Create(int type)
 {
     MapObjectAction *action = malloc(sizeof(MapObjectAction));
 
+    action->object = NULL;
+    action->result = false;
+    action->to = (Point2D){ -1, -1 };
     action->type = type;
 
     return action;
@@ -755,6 +822,28 @@ void MapTile_DestroyObjects(MapTile *tile, Map *map)
     for(int i = 0; i < tile->objectsCount; i++)
         Map_DestroyObject(map, tile->objects[i]);
     tile->objectsCount = 0;
+}
+
+void MapTile_DestroyObjectsExcludePlayer(MapTile *tile, Map *map)
+{
+    for(int i = 0; i < tile->objectsCount; i++)
+    {
+        if(tile->objects[i] == map->player) continue;
+        Map_DestroyObject(map, tile->objects[i]);
+        tile->objectsCount--;
+    }
+}
+
+MapObject *MapTile_GetObjectWithFlags(MapTile *tile, uint32_t flags)
+{
+    for(int i = 0; i < tile->objectsCount; i++)
+    {
+        if(!(tile->objects[i]->flags & flags)) continue;
+
+        return tile->objects[i];
+    }
+
+    return NULL;
 }
 
 bool MapTile_HasObject(MapTile *tile, MapObject *mapObject)

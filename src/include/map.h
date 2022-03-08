@@ -3,13 +3,15 @@
 
 #include "console.h"
 
-#define MAPOBJECTACTIONTYPE_MOVE    0
-#define MAPOBJECTACTIONTYPE_OPEN    1
+#define MAPOBJECTACTIONTYPE_MOVE         0
+#define MAPOBJECTACTIONTYPE_OPEN         1
+#define MAPOBJECTACTIONTYPE_USESTAIRS    2
 
 #define MAPOBJECTID_PLAYER          0
 #define MAPOBJECTID_DOOR            1
 #define MAPOBJECTID_WATER           2
 #define MAPOBJECTID_WATERSOURCE     3
+#define MAPOBJECTID_STAIRS          4
 
 #define MAPOBJECTFLAG_BLOCKSGAS             1 << 0
 #define MAPOBJECTFLAG_BLOCKSLIGHT           1 << 1
@@ -22,7 +24,9 @@
 #define MAPOBJECTFLAG_ISLIVING              1 << 8
 #define MAPOBJECTFLAG_ISOPEN                1 << 9
 #define MAPOBJECTFLAG_PLACEINDOORWAYS       1 << 10
-#define MAPOBJECTFLAG_PLAYER                1 << 11
+#define MAPOBJECTFLAG_PLACEINROOM           1 << 11
+#define MAPOBJECTFLAG_PLAYER                1 << 12
+#define MAPOBJECTFLAG_STAIRS                1 << 13
 
 #define MAPOBJECTVIEW_UNSEEN        0
 #define MAPOBJECTVIEW_SEEN          1
@@ -87,6 +91,7 @@ typedef struct MapTile
 
 typedef struct Map
 {
+    int level;
     int levelFloodTimer;
     size_t levelFloodTimerSize;
     MapObject *player;
@@ -100,6 +105,8 @@ typedef struct Map
 } Map;
 
 MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action);
+void Map_Clear(Map *map);
+void Map_ClearExcludePlayer(Map *map);
 Map *Map_Create(Size2D size, Point2D renderOffset);
 MapObject *Map_CreateObject(Map *map, uint16_t id);
 void Map_Destroy(Map *map);
@@ -127,6 +134,8 @@ void MapTile_AddObject(MapTile *tile, MapObject *mapObject);
 void MapTile_RemoveObject(MapTile *tile, MapObject *mapObject);
 void MapTile_Destroy(MapTile *tile, Map *map);
 void MapTile_DestroyObjects(MapTile *tile, Map *map);
+void MapTile_DestroyObjectsExcludePlayer(MapTile *tile, Map *map);
+MapObject *MapTile_GetObjectWithFlags(MapTile *tile, uint32_t flags);
 bool MapTile_HasObject(MapTile *tile, MapObject *mapObject);
 void MapTile_SetType(MapTile *tile, int type);
 void MapTile_UpdatePassable(MapTile *tile);

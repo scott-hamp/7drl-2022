@@ -67,7 +67,7 @@ void Game_HandleInput(Game *game)
     if(game->screen == SCREEN_TITLE)
     {
         Map_Generate(game->map);
-        Game_Log(game, "The ship teeters on the brink...", CONSOLECOLORPAIR_WHITEBLACK, 0);
+        Game_Log(game, "The ship begins to slowly sink...", CONSOLECOLORPAIR_WHITEBLACK, 0);
 
         Console_Clear(game->console);
         Map_Render(game->map, game->map->player, game->console);
@@ -116,7 +116,7 @@ void Game_HandleInput(Game *game)
 
                 game->commandPoint = to;
                 char *desc = Map_GetPointDescription(game->map, to);
-                Game_LogChangeF(game, CONSOLECOLORPAIR_YELLOWBLACK, 0, "Look at what? (Direction, Esc.) -> %s", desc);
+                Game_LogChangeF(game, CONSOLECOLORPAIR_YELLOWBLACK, 0, "Look at what? (direction / esc.) - %s", desc);
 
                 Game_RenderUI(game);
                 Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->commandPoint.x, game->map->renderOffset.y + game->commandPoint.y });
@@ -197,7 +197,7 @@ void Game_HandleInput(Game *game)
             if(game->key == 120) // 'X' == Look
             {
                 game->commandActive = COMMAND_LOOK;
-                Game_Log(game, "Look at what? (Direction, Esc.) -> Yourself.", CONSOLECOLORPAIR_YELLOWBLACK, 0);
+                Game_Log(game, "Look at what? (direction, esc.) - Yourself.", CONSOLECOLORPAIR_YELLOWBLACK, 0);
                 game->commandPoint = (Point2D){ game->map->player->position.x, game->map->player->position.y };
 
                 Game_RenderUI(game);
@@ -207,6 +207,23 @@ void Game_HandleInput(Game *game)
                 return;
             }
         
+            if(game->key == 60) // '<' == Go up stairs
+            {
+                MapObjectAction *action = MapObjectAction_Create(MAPOBJECTACTIONTYPE_USESTAIRS);
+                action->object = game->map->player;
+                action = Map_AttemptObjectAction(game->map, action);
+
+                if(!action->result)
+                {
+                    MapObjectAction_Destroy(action);
+                    return;
+                }
+
+                MapObjectAction_Destroy(action);
+                Game_Log(game, "You ascend the stairs.", CONSOLECOLORPAIR_WHITEBLACK, 0);
+                Console_Clear(game->console);
+            }
+
             if(direction.x != 0 || direction.y != 0)
             {
                 MapObjectAction *action = MapObjectAction_Create(MAPOBJECTACTIONTYPE_MOVE);
