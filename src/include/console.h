@@ -7,7 +7,7 @@
     #define _XOPEN_SOURCE_EXTENDED
     #include <ncursesw/curses.h>
 #else
-    #if CURSESINDEX == 2
+    #if CURSESINDEX == 1
         #define PDC_DLL_BUILD
     #endif
     #include <curses.h>
@@ -38,6 +38,7 @@ typedef struct Console
 
 Console *Console_Create();
 void Console_Clear(Console *console);
+void Console_ClearRect(Console *console, Rect2D rect);
 void Console_ClearRow(Console *console, int y);
 void Console_Destroy(Console *console);
 void Console_DrawBar(Console *console, int y, int x, size_t width, int value, int valueMax, int colorPair, int attributes);

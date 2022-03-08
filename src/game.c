@@ -9,6 +9,7 @@ Game *Game_Create(Console *console)
     game->map = Map_Create((Size2D){ 80, 20 }, (Point2D){ 0, 0 });
     game->screen = SCREEN_TITLE;
     game->turn = 1;
+    game->uiInventoryOpen = false;
 
     Console_SetCursor(game->console, 1);
     Console_Clear(game->console);
@@ -138,7 +139,9 @@ void Game_HandleInput(Game *game)
                 if(tile->objectsCount == 0)
                 {
                     Game_Log(game, "There's nothing to open or close there.", CONSOLECOLORPAIR_WHITEBLACK, 0);
+
                     Game_RenderUI(game);
+                    Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->map->player->position.x, game->map->renderOffset.y + game->map->player->position.y });
                     Console_Refresh(game->console);
                     return;
                 }
@@ -183,18 +186,60 @@ void Game_HandleInput(Game *game)
         }
         else
         {
+            if(game->key == 105 || (game->key == 27 && game->uiInventoryOpen)) // 'i' == Inventory
+            {
+                game->uiInventoryOpen = !game->uiInventoryOpen;
 
-            if(game->key == 111) // 'O' == Open / Close
+                if(!game->uiInventoryOpen)
+                {
+                    Console_Clear(game->console);
+                    Map_Render(game->map, game->map->player, game->console);
+                }
+                Game_RenderUI(game);
+                if(game->uiInventoryOpen)
+                    Console_SetCursor(game->console, 0);
+                else
+                    Console_SetCursor(game->console, 1);
+                Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->map->player->position.x, game->map->renderOffset.y + game->map->player->position.y });
+                Console_Refresh(game->console);
+                return;
+            }
+
+            if(game->key == 44 || game->key == 103) // 'g' / ',' == Get
+            {
+                MapObjectAction *action = MapObjectAction_Create(MAPOBJECTACTIONTYPE_PICKUP);
+                action->object = game->map->player;
+                action->to = game->map->player->position;
+                action = Map_AttemptObjectAction(game->map, action);
+
+                if(!action->result)
+                {
+                    Game_Log(game, action->resultMessage, CONSOLECOLORPAIR_WHITEBLACK, 0);
+                    MapObjectAction_Destroy(action);
+
+                    Game_RenderUI(game);
+                    Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->map->player->position.x, game->map->renderOffset.y + game->map->player->position.y });
+                    Console_Refresh(game->console);
+                    return;
+                }
+
+                Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "You pick up the %s.", action->targetItem->name);
+                MapObjectAction_Destroy(action);
+                Game_MapNextTurn(game, game->map);
+            }
+
+            if(game->key == 111) // 'o' == Open / Close
             {
                 game->commandActive = COMMAND_OPENCLOSE;
                 Game_Log(game, "Open / close in which direction?", CONSOLECOLORPAIR_YELLOWBLACK, 0);
 
                 Game_RenderUI(game);
+                Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->map->player->position.x, game->map->renderOffset.y + game->map->player->position.y });
                 Console_Refresh(game->console);
                 return;
             }
 
-            if(game->key == 120) // 'X' == Look
+            if(game->key == 120) // 'x' == Look
             {
                 game->commandActive = COMMAND_LOOK;
                 Game_Log(game, "Look at what? (direction, esc.) - Yourself.", CONSOLECOLORPAIR_YELLOWBLACK, 0);
@@ -397,6 +442,7 @@ void Game_MapObjectTakesTurn(Game *game, Map *map, MapObject *mapObject)
 
     if(mapObject->flags & MAPOBJECTFLAG_ISLIQUID)
     {
+        mapObject->description = (mapObject->height < 5) ? "Shallow water." : "Deep water.";
         if(mapObject->height == 1) return;
 
         Point2D offset = (Point2D){ -1 + rand() % 3, -1 + rand() % 3 };
@@ -471,13 +517,33 @@ void Game_RenderUI(Game *game)
     {
         LogMessage *lm = game->log[game->logSize - (i + 1)];
         Console_ClearRow(game->console, 20 + i);
-        Console_Write(game->console, 20 + i, 20, lm->str, lm->colorPair, lm->attributes);
+        Console_Write(game->console, 20 + i, 23, lm->str, lm->colorPair, lm->attributes);
     }
 
     Console_Write(game->console, 20, 0, game->map->player->name, CONSOLECOLORPAIR_WHITEBLACK, A_BOLD);
-    Console_WriteF(game->console, 21, 0, CONSOLECOLORPAIR_WHITEBLACK, 0, "T: %d   ", game->turn);
-    Console_Write(game->console, 22, 0, "HP: [          ]", CONSOLECOLORPAIR_WHITEBLACK, 0);
-    Console_Write(game->console, 23, 0, "O2: [          ]", CONSOLECOLORPAIR_WHITEBLACK, 0);
-    Console_DrawBarW(game->console, 22, 5, 10, game->map->player->hp, game->map->player->hpMax, CONSOLECOLORPAIR_REDBLACK, 0);
-    Console_DrawBarW(game->console, 23, 5, 10, game->map->player->o2, game->map->player->o2Max, CONSOLECOLORPAIR_CYANBLACK, 0);
+    
+    Console_Write(game->console, 21, 0, "HP: [               ]", CONSOLECOLORPAIR_WHITEBLACK, 0);
+    Console_Write(game->console, 22, 0, "O2: [               ]", CONSOLECOLORPAIR_WHITEBLACK, 0);
+    Console_DrawBarW(game->console, 21, 5, 15, game->map->player->hp, game->map->player->hpMax, CONSOLECOLORPAIR_REDBLACK, 0);
+    Console_DrawBarW(game->console, 22, 5, 15, game->map->player->o2, game->map->player->o2Max, CONSOLECOLORPAIR_CYANBLACK, 0);
+    Console_WriteF(game->console, 23, 0, CONSOLECOLORPAIR_WHITEBLACK, 0, "ATT: %d (+%d)  DEF: %d   ", game->map->player->attack, game->map->player->attackToHit, game->map->player->defense);
+    Console_WriteF(game->console, 24, 0, CONSOLECOLORPAIR_WHITEBLACK, 0, "FLOOR: %d  T: %d   ", game->map->level, game->turn);
+
+    if(game->uiInventoryOpen)
+    {
+        Rect2D rect;
+        rect.position = (Point2D){ 0, 0 };
+        rect.size = (Size2D){ 15, 15 };
+        Console_ClearRect(game->console, rect);
+
+        Console_Write(game->console, 0, 0, "Inventory: ", CONSOLECOLORPAIR_BLACKWHITE, 0);
+
+        for(int i = 0; i < 10; i++)
+        {
+            char *str = "";
+            if(i < game->map->player->itemsCount)
+                str = game->map->player->items[i]->description;
+            Console_WriteF(game->console, 2 + i, 1, CONSOLECOLORPAIR_WHITEBLACK, 0, "%c. %s", 'a' + i, str);
+        }
+    }
 }

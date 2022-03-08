@@ -45,6 +45,39 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
         return action;
     }
 
+    if(action->type == MAPOBJECTACTIONTYPE_PICKUP)
+    {
+        MapTile *tile = Map_GetTile(map, action->object->position);
+        if(tile->objectsCount == 0) return action;
+
+        MapObject *target = MapTile_GetObjectWithFlags(tile, MAPOBJECTFLAG_ISITEM);
+        if(target == NULL)
+        {
+            action->resultMessage = "There's nothing to pick up.";
+            return action;
+        }
+
+        action->target = target;
+        if(action->object->itemsCount == 10)
+        {
+            action->resultMessage = "Inventory is full.";
+            return action;
+        }
+
+        action->result = true;
+
+        MapObjectAsItem *item = MapObject_ToItem(action->target);
+        MapTile_RemoveObject(tile, action->target);
+        Map_DestroyObject(map, action->target);
+        action->target = NULL;
+        action->targetItem = item;
+
+        action->object->items[action->object->itemsCount] = item;
+        action->object->itemsCount++;
+
+        return action;
+    }
+
     if(action->type == MAPOBJECTACTIONTYPE_USESTAIRS)
     {
         MapTile *tile = Map_GetTile(map, action->object->position);
@@ -119,11 +152,15 @@ Map *Map_Create(Size2D size, Point2D renderOffset)
 MapObject *Map_CreateObject(Map *map, uint16_t id)
 {
     MapObject *mapObject = MapObject_Create("none");
+    mapObject->id = id;
     mapObject->view = NULL;
     bool hasView = false;
 
     if(id == MAPOBJECTID_PLAYER) // Player
     {
+        mapObject->attack = 1;
+        mapObject->attackToHit = 3;
+        mapObject->defense = 3;
         mapObject->description = "Yourself.";
         mapObject->layer = 1;
         mapObject->name = "Player";
@@ -147,6 +184,18 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->flags |= (MAPOBJECTFLAG_CANOPEN | MAPOBJECTFLAG_BLOCKSGAS | MAPOBJECTFLAG_BLOCKSLIGHT | MAPOBJECTFLAG_BLOCKSLIQUID | MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_PLACEINDOORWAYS);
         mapObject->wchr = L'+';
         mapObject->wchrAlt = L'`';
+    }
+
+    if(id == MAPOBJECTID_DIVEKNIFE) // Dive knife
+    {
+        mapObject->attack = 3;
+        mapObject->attackToHit = 1;
+        mapObject->description = "A dive knife.";
+        mapObject->layer = 2;
+        mapObject->name = "dive knife";
+        mapObject->flags |= MAPOBJECTFLAG_ISITEM;
+        mapObject->wchr = L'/';
+        mapObject->wchrAlt = L'/';
     }
 
     if(id == MAPOBJECTID_WATER) // Water
@@ -177,7 +226,7 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
 
     if(id == MAPOBJECTID_STAIRS) // Stairs
     {
-        mapObject->description = "Stairs leading upwards.";
+        mapObject->description = "Stairs.";
         mapObject->layer = 2;
         mapObject->name = "stairs";
         mapObject->flags |= (MAPOBJECTFLAG_PLACEINROOM | MAPOBJECTFLAG_STAIRS);
@@ -205,8 +254,8 @@ void Map_Destroy(Map *map)
 
 void Map_DestroyObject(Map* map, MapObject *mapObject)
 {
-    for(int i = 0; i < mapObject->objectsCount; i++)
-        Map_DestroyObject(map, mapObject->objects[i]);
+    for(int i = 0; i < mapObject->itemsCount; i++)
+        Map_DestroyObject(map, mapObject->items[i]);
     if(mapObject->view != NULL)
         free(mapObject->view);
     free(mapObject);
@@ -218,69 +267,88 @@ void Map_Generate(Map *map)
     if(map->levelFloodTimerSize < 50) map->levelFloodTimerSize = 50;
     map->levelFloodTimer = (int)map->levelFloodTimerSize;
 
-    for(int y = 0; y < map->size.height; y++)
-    {
-        for(int x = 0; x < map->size.width; x++)
-        {
-            MapTile *tile = map->tiles[(y * map->size.width) + x];
-            MapTile_SetType(tile, MAPTILETYPE_WALL);
-            MapTile_DestroyObjects(tile, map);
-        }
-    }
-
     while(true)
     {
-        for(int i = 0; i < map->roomsCount; i++)
-            free(map->rooms[i]);
-        map->roomsCount = 0;
-
-        Point2D divisions = (Point2D){ 3, 2 };
-
-        for(int y = 1; y < map->size.height - 1; y += map->size.height / divisions.y)
+        for(int y = 0; y < map->size.height; y++)
         {
-            for(int x = 1; x < map->size.width - 1; x += map->size.width / divisions.x)
+            for(int x = 0; x < map->size.width; x++)
             {
-                if(rand() % 100 >= 80) continue;
-
-                map->rooms[map->roomsCount] = malloc(sizeof(Rect2D));
-                map->rooms[map->roomsCount]->position = (Point2D){ x, y };
-                map->rooms[map->roomsCount]->size = (Size2D){ (map->size.width / divisions.x) - 1, (map->size.height / divisions.y) - 1 };
-                map->roomsCount++;
+                MapTile *tile = map->tiles[(y * map->size.width) + x];
+                MapTile_SetType(tile, MAPTILETYPE_WALL);
+                MapTile_DestroyObjects(tile, map);
             }
         }
 
-        if(map->roomsCount >= 4) break;
+        while(true)
+        {
+            for(int i = 0; i < map->roomsCount; i++)
+                free(map->rooms[i]);
+            map->roomsCount = 0;
+
+            Point2D divisions = (Point2D){ 3, 2 };
+
+            for(int y = 1; y < map->size.height - 1; y += map->size.height / divisions.y)
+            {
+                for(int x = 1; x < map->size.width - 1; x += map->size.width / divisions.x)
+                {
+                    if(rand() % 100 >= 80) continue;
+
+                    map->rooms[map->roomsCount] = malloc(sizeof(Rect2D));
+                    map->rooms[map->roomsCount]->position = (Point2D){ x, y };
+                    map->rooms[map->roomsCount]->size = (Size2D){ (map->size.width / divisions.x) - 1, (map->size.height / divisions.y) - 1 };
+                    map->roomsCount++;
+                }
+            }
+
+            if(map->roomsCount >= 4) break;
+        }
+
+        for(int i = 0; i < map->roomsCount; i++)
+        {
+            Point2D offset = (Point2D){ 1 + rand() % 3, 1 + rand() % 3 };
+            map->rooms[i]->position.x += offset.x;
+            map->rooms[i]->position.y += offset.y;
+            map->rooms[i]->size.width -= ((offset.x * 2) + rand() % 2);
+            map->rooms[i]->size.height -= ((offset.y * 2) + rand() % 2);
+
+            if(rand() % 10 >= 2)
+            {
+                map->rooms[i]->size.width /= 1.5;
+                map->rooms[i]->size.height /= 1.3;
+            }
+            else
+            {
+                if(rand() % 10 >= 8)
+                {
+                    map->rooms[i]->size.width = 3 + rand() % 2;
+                    map->rooms[i]->size.height = 3 + rand() % 2;
+                }
+            }
+
+            while(map->rooms[i]->position.y + map->rooms[i]->size.width > map->size.width - 2)
+                map->rooms[i]->size.width--;
+            while(map->rooms[i]->position.y + map->rooms[i]->size.height > map->size.height - 2)
+                map->rooms[i]->size.height--;
+            if(map->rooms[i]->size.width < 3) map->rooms[i]->size.width = 3;
+            if(map->rooms[i]->size.height < 3) map->rooms[i]->size.height = 3;
+        }
+
+        bool toContinue = false;
+        for(int i = 0; i < map->roomsCount; i++)
+        {
+            Rect2D *room = map->rooms[i];
+            if(room->position.x < 1 || room->position.y < 1 || room->position.x + room->size.width >= map->size.width - 1 || room->position.y + room->size.height >= map->size.height - 1)
+            {
+                toContinue = true;
+                break;
+            }
+        }
+
+        if(!toContinue) break;
     }
 
     for(int i = 0; i < map->roomsCount; i++)
     {
-        Point2D offset = (Point2D){ 1 + rand() % 3, 1 + rand() % 3 };
-        map->rooms[i]->position.x += offset.x;
-        map->rooms[i]->position.y += offset.y;
-        map->rooms[i]->size.width -= ((offset.x * 2) + rand() % 2);
-        map->rooms[i]->size.height -= ((offset.y * 2) + rand() % 2);
-
-        if(rand() % 10 >= 2)
-        {
-            map->rooms[i]->size.width /= 1.5;
-            map->rooms[i]->size.height /= 1.3;
-        }
-        else
-        {
-            if(rand() % 10 >= 8)
-            {
-                map->rooms[i]->size.width = 3 + rand() % 2;
-                map->rooms[i]->size.height = 3 + rand() % 2;
-            }
-        }
-
-        while(map->rooms[i]->position.y + map->rooms[i]->size.width > map->size.width - 2)
-            map->rooms[i]->size.width--;
-        while(map->rooms[i]->position.y + map->rooms[i]->size.height > map->size.height - 2)
-            map->rooms[i]->size.height--;
-        if(map->rooms[i]->size.width < 3) map->rooms[i]->size.width = 3;
-        if(map->rooms[i]->size.height < 3) map->rooms[i]->size.height = 3;
-
         for(int y = 0; y < map->rooms[i]->size.height; y++)
         {
             for(int x = 0; x < map->rooms[i]->size.width; x++)
@@ -393,6 +461,21 @@ void Map_Generate(Map *map)
         Map_PlaceObject(map, Map_CreateObject(map, MAPOBJECTID_DOOR));
 
     Map_PlaceObject(map, Map_CreateObject(map, MAPOBJECTID_STAIRS));
+
+    int itemIDs[10];
+    itemIDs[0] = MAPOBJECTID_DIVEKNIFE;
+    itemIDs[1] = MAPOBJECTID_DIVEKNIFE;
+    itemIDs[2] = MAPOBJECTID_DIVEKNIFE;
+    itemIDs[3] = MAPOBJECTID_DIVEKNIFE;
+    itemIDs[4] = MAPOBJECTID_DIVEKNIFE;
+    itemIDs[5] = MAPOBJECTID_DIVEKNIFE;
+    itemIDs[6] = MAPOBJECTID_DIVEKNIFE;
+    itemIDs[7] = MAPOBJECTID_DIVEKNIFE;
+    itemIDs[8] = MAPOBJECTID_DIVEKNIFE;
+    itemIDs[9] = MAPOBJECTID_DIVEKNIFE;
+
+    for(int i = 0; i < 3 + rand() % 2; i++)
+        Map_PlaceObject(map, Map_CreateObject(map, itemIDs[rand() % 10]));
 }
 
 int Map_GetObjectView(Map *map, MapObject *mapObject, Point2D point)
@@ -771,14 +854,49 @@ MapObject *MapObject_Create(const char *name)
 {
     MapObject *mapObject = malloc(sizeof(MapObject));
 
+    mapObject->attack = 0;
+    mapObject->attackToHit = 0;
     mapObject->colorPair = CONSOLECOLORPAIR_WHITEBLACK;
+    mapObject->defense = 0;
+    mapObject->description = "Nothing.";
+    mapObject->hp = 0;
+    mapObject->hpMax = 0;
     mapObject->lastRoomIndex = -1;
     mapObject->name = name;
+    mapObject->o2 = 0;
+    mapObject->o2Max = 0;
     mapObject->flags = 0;
-    mapObject->objectsCount = 0;
+    mapObject->itemsCount = 0;
+    mapObject->turnTicks = 0;
+    mapObject->turnTicksSize = 0;
     mapObject->wchr = L' ';
 
     return mapObject;
+}
+
+MapObjectAsItem *MapObject_ToItem(MapObject *mapObject)
+{
+    if(!(mapObject->flags & MAPOBJECTFLAG_ISITEM)) return NULL;
+
+    MapObjectAsItem *item = malloc(sizeof(MapObjectAsItem));
+
+    item->colorPair = mapObject->colorPair;
+
+    item->description = malloc(sizeof(char) * (strlen(mapObject->description) + 1));
+    memset(item->description, 0, (strlen(mapObject->description) + 1));
+    strcpy(item->description, mapObject->description);
+
+    item->flags = mapObject->flags;
+    item->id = mapObject->id;
+
+    item->name = malloc(sizeof(char) * (strlen(mapObject->name) + 1));
+    memset(item->name, 0, (strlen(mapObject->name) + 1));
+    strcpy(item->name, mapObject->name);
+
+    item->wchr = mapObject->wchr;
+    item->wchrAlt = mapObject->wchrAlt;
+
+    return item;
 }
 
 MapObjectAction *MapObjectAction_Create(int type)
@@ -787,6 +905,8 @@ MapObjectAction *MapObjectAction_Create(int type)
 
     action->object = NULL;
     action->result = false;
+    action->target = NULL;
+    action->targetItem = NULL;
     action->to = (Point2D){ -1, -1 };
     action->type = type;
 

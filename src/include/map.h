@@ -3,15 +3,18 @@
 
 #include "console.h"
 
-#define MAPOBJECTACTIONTYPE_MOVE         0
-#define MAPOBJECTACTIONTYPE_OPEN         1
-#define MAPOBJECTACTIONTYPE_USESTAIRS    2
+#define MAPOBJECTACTIONTYPE_DROP         0
+#define MAPOBJECTACTIONTYPE_MOVE         1
+#define MAPOBJECTACTIONTYPE_OPEN         2
+#define MAPOBJECTACTIONTYPE_PICKUP       3
+#define MAPOBJECTACTIONTYPE_USESTAIRS    4
 
 #define MAPOBJECTID_PLAYER          0
-#define MAPOBJECTID_DOOR            1
-#define MAPOBJECTID_WATER           2
-#define MAPOBJECTID_WATERSOURCE     3
-#define MAPOBJECTID_STAIRS          4
+#define MAPOBJECTID_DIVEKNIFE       1
+#define MAPOBJECTID_DOOR            2
+#define MAPOBJECTID_STAIRS          3
+#define MAPOBJECTID_WATER           4
+#define MAPOBJECTID_WATERSOURCE     5
 
 #define MAPOBJECTFLAG_BLOCKSGAS             1 << 0
 #define MAPOBJECTFLAG_BLOCKSLIGHT           1 << 1
@@ -19,14 +22,16 @@
 #define MAPOBJECTFLAG_BLOCKSSOLID           1 << 3
 #define MAPOBJECTFLAG_CANMOVE               1 << 4
 #define MAPOBJECTFLAG_CANOPEN               1 << 5
-#define MAPOBJECTFLAG_ISLIQUID              1 << 6
-#define MAPOBJECTFLAG_ISLIQUIDSOURCE        1 << 7
-#define MAPOBJECTFLAG_ISLIVING              1 << 8
-#define MAPOBJECTFLAG_ISOPEN                1 << 9
-#define MAPOBJECTFLAG_PLACEINDOORWAYS       1 << 10
-#define MAPOBJECTFLAG_PLACEINROOM           1 << 11
-#define MAPOBJECTFLAG_PLAYER                1 << 12
-#define MAPOBJECTFLAG_STAIRS                1 << 13
+#define MAPOBJECTFLAG_HASINVENTORY          1 << 6
+#define MAPOBJECTFLAG_ISITEM                1 << 7
+#define MAPOBJECTFLAG_ISLIQUID              1 << 8
+#define MAPOBJECTFLAG_ISLIQUIDSOURCE        1 << 9
+#define MAPOBJECTFLAG_ISLIVING              1 << 10
+#define MAPOBJECTFLAG_ISOPEN                1 << 11
+#define MAPOBJECTFLAG_PLACEINDOORWAYS       1 << 12
+#define MAPOBJECTFLAG_PLACEINROOM           1 << 13
+#define MAPOBJECTFLAG_PLAYER                1 << 14
+#define MAPOBJECTFLAG_STAIRS                1 << 15
 
 #define MAPOBJECTVIEW_UNSEEN        0
 #define MAPOBJECTVIEW_SEEN          1
@@ -46,24 +51,27 @@ typedef struct MapObjectAsItem
     int colorPair;
     char *description;
     uint32_t flags;
+    int id;
     char *name;
     wchar_t wchr, wchrAlt;
 } MapObjectAsItem;
 
 typedef struct MapObject
 {
+    int attack, attackToHit, defense;
     int colorPair;
     char *description;
     uint32_t flags;
     int height;
     int hp, o2;
     size_t hpMax, o2Max;
+    int id;
     int layer;
     int lastRoomIndex;
     char *name;
     Point2D position;
-    MapObjectAsItem *objects[10];
-    size_t objectsCount;
+    MapObjectAsItem *items[10];
+    size_t itemsCount;
     int turnTicks;
     size_t turnTicksSize;
     int *view;
@@ -77,6 +85,7 @@ typedef struct MapObjectAction
     bool result;
     char *resultMessage;
     MapObject *target;
+    MapObjectAsItem *targetItem;
     int type;
     Point2D to;
 } MapObjectAction;
@@ -126,8 +135,10 @@ void Map_RenderForPlayer(Map *map, Console *console);
 void Map_RenderRect(Map *map, MapObject *viewer, Console *console, Rect2D rect);
 void Map_ResetObjectView(Map* map, MapObject *mapObject);
 void Map_UpdateObjectView(Map* map, MapObject *mapObject);
+void MapObject_AddItemToItems(MapObject *mapObject, MapObjectAsItem *item);
 MapObject *MapObject_Copy(MapObject *mapObject);
 MapObject *MapObject_Create(const char *name);
+MapObjectAsItem *MapObject_ToItem(MapObject *mapObject);
 MapObjectAction *MapObjectAction_Create(int type);
 void MapObjectAction_Destroy(MapObjectAction *action);
 void MapTile_AddObject(MapTile *tile, MapObject *mapObject);

@@ -29,6 +29,7 @@ typedef struct Game
     Map *map;
     int screen;
     uint64_t turn;
+    bool uiInventoryOpen;
 } Game;
 
 Game *Game_Create(Console *console);

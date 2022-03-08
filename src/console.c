@@ -5,6 +5,15 @@ void Console_Clear(Console *console)
     wclear(console->window);
 }
 
+void Console_ClearRect(Console *console, Rect2D rect)
+{
+    for(int y = 0; y < rect.size.height; y++)
+    {
+        for(int x = 0; x < rect.size.height; x++)
+            Console_SetChar(console, rect.position.y + y, rect.position.x + x, ' ', 0, 0);
+    }
+}
+
 void Console_ClearRow(Console *console, int y)
 {
     for(int x = 0; x < console->size.width; x++)
