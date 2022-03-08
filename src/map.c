@@ -32,6 +32,7 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
             return action;
         }
 
+        action->object->lastRoomIndex = Map_GetRoomIndexContaining(map, action->object->position);
         action->result = true;
         Map_MoveObject(map, action->object, to);
 
@@ -544,6 +545,37 @@ void Map_Render(Map *map, MapObject *viewer, Console *console)
     Map_RenderRect(map, viewer, console, rect);
 }
 
+void Map_RenderForPlayer(Map *map, Console *console)
+{
+    if(map->player->lastRoomIndex > -1)
+    {
+        Rect2D *room = map->rooms[map->player->lastRoomIndex];
+        Rect2D rectRoom;
+        rectRoom.position = (Point2D){ room->position.x - 1, room->position.y - 1 };
+        rectRoom.size = (Size2D){ room->size.width + 2, room->size.height + 2 };
+
+        Map_RenderRect(map, map->player, console, rectRoom);
+    }
+
+    int ric = Map_GetRoomIndexContaining(map, map->player->position);
+    if(ric > -1)
+    {
+        Rect2D *room = map->rooms[ric];
+        Rect2D rectRoom;
+        rectRoom.position = (Point2D){ room->position.x - 1, room->position.y - 1 };
+        rectRoom.size = (Size2D){ room->size.width + 2, room->size.height + 2 };
+
+        Map_RenderRect(map, map->player, console, rectRoom);
+        return;
+    }
+
+    Rect2D rectPlayer;
+    rectPlayer.position = (Point2D){ map->player->position.x - 5, map->player->position.y - 5 };
+    rectPlayer.size = (Size2D){ 10, 10 };
+
+    Map_RenderRect(map, map->player, console, rectPlayer);
+}
+
 void Map_RenderRect(Map *map, MapObject *viewer, Console *console, Rect2D rect)
 {
     for(int y = 0; y < map->size.height; y++)
@@ -676,6 +708,7 @@ MapObject *MapObject_Create(const char *name)
     MapObject *mapObject = malloc(sizeof(MapObject));
 
     mapObject->colorPair = CONSOLECOLORPAIR_WHITEBLACK;
+    mapObject->lastRoomIndex = -1;
     mapObject->name = name;
     mapObject->flags = 0;
     mapObject->objectsCount = 0;

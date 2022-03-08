@@ -55,6 +55,7 @@ typedef struct MapObject
     int hp, o2;
     size_t hpMax, o2Max;
     int layer;
+    int lastRoomIndex;
     char *name;
     Point2D position;
     MapObjectAsItem *objects[10];
@@ -114,6 +115,7 @@ void Map_MoveObject(Map *map, MapObject *mapObject, Point2D to);
 MapObjectAction *Map_ObjectAttemptActionAsTarget(Map *map, MapObject *mapObject, MapObjectAction *action);
 void Map_PlaceObject(Map *map, MapObject *mapObject);
 void Map_Render(Map *map, MapObject *viewer, Console *console);
+void Map_RenderForPlayer(Map *map, Console *console);
 void Map_RenderRect(Map *map, MapObject *viewer, Console *console, Rect2D rect);
 void Map_ResetObjectView(Map* map, MapObject *mapObject);
 void Map_UpdateObjectView(Map* map, MapObject *mapObject);
