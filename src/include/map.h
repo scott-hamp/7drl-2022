@@ -3,18 +3,15 @@
 
 #include "console.h"
 
-#define MAPOBJECTACTIONTYPE_DROP         0
-#define MAPOBJECTACTIONTYPE_MOVE         1
-#define MAPOBJECTACTIONTYPE_OPEN         2
-#define MAPOBJECTACTIONTYPE_PICKUP       3
-#define MAPOBJECTACTIONTYPE_USESTAIRS    4
+#define MAPOBJECTACTIONTYPE_DROP            0
+#define MAPOBJECTACTIONTYPE_EQUIPUNEQUIP    1
+#define MAPOBJECTACTIONTYPE_MOVE            2
+#define MAPOBJECTACTIONTYPE_OPEN            3
+#define MAPOBJECTACTIONTYPE_PICKUP          4
+#define MAPOBJECTACTIONTYPE_USESTAIRS       5
 
-#define MAPOBJECTID_PLAYER          0
-#define MAPOBJECTID_DIVEKNIFE       1
-#define MAPOBJECTID_DOOR            2
-#define MAPOBJECTID_STAIRS          3
-#define MAPOBJECTID_WATER           4
-#define MAPOBJECTID_WATERSOURCE     5
+#define MAPOBJECTEQUIPAT_BODY       0
+#define MAPOBJECTEQUIPAT_WEAPON     1
 
 #define MAPOBJECTFLAG_BLOCKSGAS             1 << 0
 #define MAPOBJECTFLAG_BLOCKSLIGHT           1 << 1
@@ -23,15 +20,23 @@
 #define MAPOBJECTFLAG_CANMOVE               1 << 4
 #define MAPOBJECTFLAG_CANOPEN               1 << 5
 #define MAPOBJECTFLAG_HASINVENTORY          1 << 6
-#define MAPOBJECTFLAG_ISITEM                1 << 7
-#define MAPOBJECTFLAG_ISLIQUID              1 << 8
-#define MAPOBJECTFLAG_ISLIQUIDSOURCE        1 << 9
-#define MAPOBJECTFLAG_ISLIVING              1 << 10
-#define MAPOBJECTFLAG_ISOPEN                1 << 11
-#define MAPOBJECTFLAG_PLACEINDOORWAYS       1 << 12
-#define MAPOBJECTFLAG_PLACEINROOM           1 << 13
-#define MAPOBJECTFLAG_PLAYER                1 << 14
-#define MAPOBJECTFLAG_STAIRS                1 << 15
+#define MAPOBJECTFLAG_ISEQUIPMENT           1 << 7
+#define MAPOBJECTFLAG_ISITEM                1 << 8
+#define MAPOBJECTFLAG_ISLIQUID              1 << 9
+#define MAPOBJECTFLAG_ISLIQUIDSOURCE        1 << 10
+#define MAPOBJECTFLAG_ISLIVING              1 << 11
+#define MAPOBJECTFLAG_ISOPEN                1 << 12
+#define MAPOBJECTFLAG_PLACEINDOORWAYS       1 << 13
+#define MAPOBJECTFLAG_PLACEINROOM           1 << 14
+#define MAPOBJECTFLAG_PLAYER                1 << 15
+#define MAPOBJECTFLAG_STAIRS                1 << 16
+
+#define MAPOBJECTID_PLAYER          0
+#define MAPOBJECTID_DIVEKNIFE       1
+#define MAPOBJECTID_DOOR            2
+#define MAPOBJECTID_STAIRS          3
+#define MAPOBJECTID_WATER           4
+#define MAPOBJECTID_WATERSOURCE     5
 
 #define MAPOBJECTVIEW_UNSEEN        0
 #define MAPOBJECTVIEW_SEEN          1
@@ -48,8 +53,10 @@
 
 typedef struct MapObjectAsItem
 {
+    int attack, attackToHit, defense;
     int colorPair;
     char *description;
+    int equipAt;
     uint32_t flags;
     int id;
     char *name;
@@ -58,9 +65,12 @@ typedef struct MapObjectAsItem
 
 typedef struct MapObject
 {
+    int attackBase, attackToHitBase, defenseBase;
     int attack, attackToHit, defense;
     int colorPair;
     char *description;
+    int equipAt;
+    MapObjectAsItem *equipment[2];
     uint32_t flags;
     int height;
     int hp, o2;
@@ -105,7 +115,7 @@ typedef struct Map
     size_t levelFloodTimerSize;
     MapObject *player;
     Point2D renderOffset;
-    Point2D *roomDoorways[10];
+    Point2D roomDoorways[10];
     size_t roomDoorwaysCount;
     Rect2D *rooms[25];
     size_t roomsCount;
@@ -138,9 +148,13 @@ void Map_UpdateObjectView(Map* map, MapObject *mapObject);
 void MapObject_AddItemToItems(MapObject *mapObject, MapObjectAsItem *item);
 MapObject *MapObject_Copy(MapObject *mapObject);
 MapObject *MapObject_Create(const char *name);
+int MapObject_GetEquippedAt(MapObject *mapObject, MapObjectAsItem *item);
+void MapObject_RemoveItemFromItems(MapObject *mapObject, MapObjectAsItem *item);
 MapObjectAsItem *MapObject_ToItem(MapObject *mapObject);
+void MapObject_UpdateAttributes(MapObject *mapObject);
 MapObjectAction *MapObjectAction_Create(int type);
 void MapObjectAction_Destroy(MapObjectAction *action);
+void MapObjectAsItem_Destroy(MapObjectAsItem *item);
 void MapTile_AddObject(MapTile *tile, MapObject *mapObject);
 void MapTile_RemoveObject(MapTile *tile, MapObject *mapObject);
 void MapTile_Destroy(MapTile *tile, Map *map);

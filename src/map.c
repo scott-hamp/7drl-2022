@@ -2,6 +2,76 @@
 
 MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
 {
+    if(action->type == MAPOBJECTACTIONTYPE_DROP)
+    {
+        if(action->targetItem == NULL) return action;
+
+        int equipAt = MapObject_GetEquippedAt(action->object, action->targetItem);
+        if(equipAt > -1)
+        {
+            action->type = MAPOBJECTACTIONTYPE_EQUIPUNEQUIP;
+            action = Map_AttemptObjectAction(map, action);
+
+            if(!action->result)
+            {
+                action->type = MAPOBJECTACTIONTYPE_DROP;
+                return action;
+            }
+        }
+
+        for(int y = -1; y < 2; y++)
+        {
+            for(int x = -1; x < 2; x++)
+            {
+                MapTile *tile = Map_GetTile(map, (Point2D){ action->object->position.x + x, action->object->position.y + y });
+                if(tile == NULL) continue;
+                if(!(tile->passable & MAPTILEPASSABLE_SOLID)) continue;
+                if(tile->objectsCount == 10) continue;
+
+                MapObject *mapObject = Map_CreateObject(map, action->targetItem->id);
+                MapTile_AddObject(tile, mapObject);
+                MapObject_RemoveItemFromItems(action->object, action->targetItem);
+                MapObjectAsItem_Destroy(action->targetItem);
+
+                action->resultMessage = "You drop it.";
+                action->result = true;
+                return action;
+            }
+        }
+
+        action->resultMessage = "There's no place to drop it.";
+        return action;
+    }
+
+    if(action->type == MAPOBJECTACTIONTYPE_EQUIPUNEQUIP)
+    {
+        if(action->targetItem == NULL) return action;
+
+        if(!(action->targetItem->flags & MAPOBJECTFLAG_ISEQUIPMENT))
+        {
+            action->resultMessage = "That cannot be equipped.";
+            return action;
+        }
+
+        if(action->object->equipment[action->targetItem->equipAt] == action->targetItem)
+        {
+            action->object->equipment[action->targetItem->equipAt] = NULL;
+            action->resultMessage = "You put away the %s.";
+            action->result = true;
+            return action;
+        }
+
+        if(action->object->equipment[action->targetItem->equipAt] != NULL)
+        {
+            //...
+        }
+
+        action->object->equipment[action->targetItem->equipAt] = action->targetItem;
+        action->resultMessage = "You ready the %s.";
+        action->result = true;
+        return action;
+    }
+
     if(action->type == MAPOBJECTACTIONTYPE_MOVE)
     {
         Point2D to = (Point2D){ action->object->position.x + action->direction.x, action->object->position.y + action->direction.y };
@@ -158,9 +228,9 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
 
     if(id == MAPOBJECTID_PLAYER) // Player
     {
-        mapObject->attack = 1;
-        mapObject->attackToHit = 3;
-        mapObject->defense = 3;
+        mapObject->attackBase = 1;
+        mapObject->attackToHitBase = 1;
+        mapObject->defenseBase = 3;
         mapObject->description = "Yourself.";
         mapObject->layer = 1;
         mapObject->name = "Player";
@@ -191,9 +261,10 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->attack = 3;
         mapObject->attackToHit = 1;
         mapObject->description = "A dive knife.";
+        mapObject->equipAt = MAPOBJECTEQUIPAT_WEAPON;
         mapObject->layer = 2;
         mapObject->name = "dive knife";
-        mapObject->flags |= MAPOBJECTFLAG_ISITEM;
+        mapObject->flags |= (MAPOBJECTFLAG_ISEQUIPMENT | MAPOBJECTFLAG_ISITEM);
         mapObject->wchr = L'/';
         mapObject->wchrAlt = L'/';
     }
@@ -241,6 +312,8 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         for(int i = 0; i < map->size.width * map->size.height; i++)
             mapObject->view[i] = MAPOBJECTVIEW_UNSEEN;
     }
+
+    MapObject_UpdateAttributes(mapObject);
 
     return mapObject;
 }
@@ -300,7 +373,7 @@ void Map_Generate(Map *map)
                 }
             }
 
-            if(map->roomsCount >= 4) break;
+            if(map->roomsCount >= 4 && map->roomsCount < 6) break;
         }
 
         for(int i = 0; i < map->roomsCount; i++)
@@ -337,7 +410,7 @@ void Map_Generate(Map *map)
         for(int i = 0; i < map->roomsCount; i++)
         {
             Rect2D *room = map->rooms[i];
-            if(room->position.x < 1 || room->position.y < 1 || room->position.x + room->size.width >= map->size.width - 1 || room->position.y + room->size.height >= map->size.height - 1)
+            if(room->position.x < 2 || room->position.y < 2 || room->position.x + room->size.width >= map->size.width - 2 || room->position.y + room->size.height >= map->size.height - 2)
             {
                 toContinue = true;
                 break;
@@ -356,7 +429,7 @@ void Map_Generate(Map *map)
                 Point2D point = (Point2D){ map->rooms[i]->position.x + x, map->rooms[i]->position.y + y };
                 if(point.x < 1 || point.y < 1 || point.x >= map->size.width - 1 || point.y >= map->size.height - 1) 
                     continue;
-                MapTile_SetType(map->tiles[(point.y * map->size.width) + point.x], MAPTILETYPE_FLOOR);
+                MapTile_SetType(Map_GetTile(map, point), MAPTILETYPE_FLOOR);
             }
         }
     }
@@ -420,8 +493,6 @@ void Map_Generate(Map *map)
         if(toBreak) break;
     }
 
-    for(int i = 0; i < map->roomDoorwaysCount; i++)
-        free(map->roomDoorways[i]);
     map->roomDoorwaysCount = 0;
 
     for(int i = 0; i < map->roomsCount; i++)
@@ -443,9 +514,8 @@ void Map_Generate(Map *map)
                 if(!((Map_GetTile(map, (Point2D){ point.x - 1, point.y })->type == MAPTILETYPE_WALL && Map_GetTile(map, (Point2D){ point.x + 1, point.y })->type == MAPTILETYPE_WALL) || (Map_GetTile(map, (Point2D){ point.x, point.y - 1 })->type == MAPTILETYPE_WALL && Map_GetTile(map, (Point2D){ point.x, point.y + 1 })->type == MAPTILETYPE_WALL)))
                     continue;
 
-                map->roomDoorways[map->roomDoorwaysCount] = malloc(sizeof(Point2D));
-                map->roomDoorways[map->roomDoorwaysCount]->x = point.x;
-                map->roomDoorways[map->roomDoorwaysCount]->y = point.y;
+                map->roomDoorways[map->roomDoorwaysCount].x = point.x;
+                map->roomDoorways[map->roomDoorwaysCount].y = point.y;
                 map->roomDoorwaysCount++;
             }
         }
@@ -656,8 +726,8 @@ void Map_PlaceObject(Map *map, MapObject *mapObject)
         {
             if(map->roomDoorwaysCount == 0) return;
 
-            Point2D *roomDoorway = map->roomDoorways[rand() % map->roomDoorwaysCount];
-            point = (Point2D){ roomDoorway->x, roomDoorway->y };
+            Point2D roomDoorway = map->roomDoorways[rand() % map->roomDoorwaysCount];
+            point = (Point2D){ roomDoorway.x, roomDoorway.y };
             tile = Map_GetTile(map, point);
             if(tile == NULL) continue;
 
@@ -855,16 +925,22 @@ MapObject *MapObject_Create(const char *name)
     MapObject *mapObject = malloc(sizeof(MapObject));
 
     mapObject->attack = 0;
+    mapObject->attackBase = 0;
     mapObject->attackToHit = 0;
+    mapObject->attackToHitBase = 0;
     mapObject->colorPair = CONSOLECOLORPAIR_WHITEBLACK;
     mapObject->defense = 0;
+    mapObject->defenseBase = 0;
     mapObject->description = "Nothing.";
+    mapObject->equipAt = -1;
     mapObject->hp = 0;
     mapObject->hpMax = 0;
     mapObject->lastRoomIndex = -1;
     mapObject->name = name;
     mapObject->o2 = 0;
     mapObject->o2Max = 0;
+    for(int i = 0; i < 2; i++)
+        mapObject->equipment[i] = NULL;
     mapObject->flags = 0;
     mapObject->itemsCount = 0;
     mapObject->turnTicks = 0;
@@ -874,18 +950,47 @@ MapObject *MapObject_Create(const char *name)
     return mapObject;
 }
 
+int MapObject_GetEquippedAt(MapObject *mapObject, MapObjectAsItem *item)
+{
+    for(int i = 0; i < 2; i++)
+    {
+        if(mapObject->equipment[i] != item) continue;
+
+        return i;
+    }
+
+    return -1;
+}
+
+void MapObject_RemoveItemFromItems(MapObject *mapObject, MapObjectAsItem *item)
+{
+    for(int i = 0; i < mapObject->itemsCount; i++)
+    {
+        if(mapObject->items[i] != item) continue;
+
+        for(int j = i; j < mapObject->itemsCount - 1; j++)
+            mapObject->items[j] = mapObject->items[j + 1];
+        mapObject->itemsCount--;
+        return;
+    }
+}
+
 MapObjectAsItem *MapObject_ToItem(MapObject *mapObject)
 {
     if(!(mapObject->flags & MAPOBJECTFLAG_ISITEM)) return NULL;
 
     MapObjectAsItem *item = malloc(sizeof(MapObjectAsItem));
 
+    item->attack = mapObject->attack;
+    item->attackToHit = mapObject->attackToHit;
     item->colorPair = mapObject->colorPair;
+    item->defense = mapObject->defense;
 
     item->description = malloc(sizeof(char) * (strlen(mapObject->description) + 1));
     memset(item->description, 0, (strlen(mapObject->description) + 1));
     strcpy(item->description, mapObject->description);
 
+    item->equipAt = mapObject->equipAt;
     item->flags = mapObject->flags;
     item->id = mapObject->id;
 
@@ -899,12 +1004,32 @@ MapObjectAsItem *MapObject_ToItem(MapObject *mapObject)
     return item;
 }
 
+void MapObject_UpdateAttributes(MapObject *mapObject)
+{
+    if(mapObject->flags & MAPOBJECTFLAG_ISITEM) return;
+
+    mapObject->attack = mapObject->attackBase;
+    mapObject->attackToHit = mapObject->attackToHitBase;
+    mapObject->defense = mapObject->defenseBase;
+
+    for(int i = 0; i < mapObject->itemsCount; i++)
+    {
+        int equippedAt = MapObject_GetEquippedAt(mapObject, mapObject->items[i]);
+        if(equippedAt == -1) continue;
+
+        mapObject->attack += mapObject->items[i]->attack;
+        mapObject->attackToHit += mapObject->items[i]->attackToHit;
+        mapObject->defense += mapObject->items[i]->defense;
+    }
+}
+
 MapObjectAction *MapObjectAction_Create(int type)
 {
     MapObjectAction *action = malloc(sizeof(MapObjectAction));
 
     action->object = NULL;
     action->result = false;
+    action->resultMessage = "";
     action->target = NULL;
     action->targetItem = NULL;
     action->to = (Point2D){ -1, -1 };
@@ -916,6 +1041,13 @@ MapObjectAction *MapObjectAction_Create(int type)
 void MapObjectAction_Destroy(MapObjectAction *action)
 {
     free(action);
+}
+
+void MapObjectAsItem_Destroy(MapObjectAsItem *item)
+{
+    free(item->name);
+    free(item->description);
+    free(item);
 }
 
 void MapTile_AddObject(MapTile *tile, MapObject *mapObject)

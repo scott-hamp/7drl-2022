@@ -114,6 +114,40 @@ void Game_HandleInput(Game *game)
                 return;
             }
 
+            // Command: Drop
+
+            if(game->commandActive == COMMAND_DROP)
+            {
+                if(game->key < 'a' || game->key > 'j') return;
+
+                int index = game->key - 'a';
+                if(index >= game->map->player->itemsCount) return;
+
+                MapObjectAction *action = MapObjectAction_Create(MAPOBJECTACTIONTYPE_DROP);
+                action->object = game->map->player;
+                action->targetItem = game->map->player->items[index];
+            
+                action = Map_AttemptObjectAction(game->map, action);
+
+                if(!action->result)
+                {
+                    Game_Log(game, action->resultMessage, CONSOLECOLORPAIR_WHITEBLACK, 0);
+                    Game_RenderUI(game);
+                    Console_Refresh(game->console);
+                    MapObjectAction_Destroy(action);
+                    return;
+                }
+
+                Game_Log(game, action->resultMessage, CONSOLECOLORPAIR_WHITEBLACK, 0);
+
+                MapObjectAction_Destroy(action);
+                game->uiInventoryOpen = false;
+                game->commandActive = -1;
+                Console_Clear(game->console);
+                Console_SetCursor(game->console, 1);
+                Game_MapNextTurn(game, game->map);
+            }
+
             // Command: Look
 
             if(game->commandActive == COMMAND_LOOK)
@@ -194,6 +228,41 @@ void Game_HandleInput(Game *game)
                     Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "You close the %s.", toOpenClose->name);
             
                 game->commandActive = -1;
+                Game_MapNextTurn(game, game->map);
+            }
+
+            // Command: Wear / Wield
+
+            if(game->commandActive == COMMAND_WEARWIELD)
+            {
+                if(game->key < 'a' || game->key > 'j') return;
+
+                int index = game->key - 'a';
+                if(index >= game->map->player->itemsCount) return;
+
+                MapObjectAction *action = MapObjectAction_Create(MAPOBJECTACTIONTYPE_EQUIPUNEQUIP);
+                action->object = game->map->player;
+                action->targetItem = game->map->player->items[index];
+            
+                action = Map_AttemptObjectAction(game->map, action);
+
+                if(!action->result)
+                {
+                    Game_Log(game, action->resultMessage, CONSOLECOLORPAIR_WHITEBLACK, 0);
+                    Game_RenderUI(game);
+                    Console_Refresh(game->console);
+                    MapObjectAction_Destroy(action);
+                    return;
+                }
+
+                Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, action->resultMessage, action->targetItem->name);
+
+                MapObjectAction_Destroy(action);
+                game->uiInventoryOpen = false;
+                game->commandActive = -1;
+                Console_Clear(game->console);
+                Console_SetCursor(game->console, 1);
+                Game_MapNextTurn(game, game->map);
             }
         }
         else
@@ -222,6 +291,22 @@ void Game_HandleInput(Game *game)
             }
 
             if(game->uiInventoryOpen) return;
+
+            // 'd' == Drop
+
+            if(game->key == 100)
+            {
+                game->commandActive = COMMAND_DROP;
+                game->uiInventoryOpen = true;
+
+                Game_Log(game, "Drop which item? (a - j)", CONSOLECOLORPAIR_YELLOWBLACK, 0);
+
+                Console_Clear(game->console);
+                Game_RenderUI(game);
+                Console_SetCursor(game->console, 0);
+                Console_Refresh(game->console);
+                return;
+            }
 
             // 'g' / ',' == Get
 
@@ -268,8 +353,9 @@ void Game_HandleInput(Game *game)
                 game->commandActive = COMMAND_WEARWIELD;
                 game->uiInventoryOpen = true;
 
-                Game_Log(game, "Wear / wield which item? (a - j)", CONSOLECOLORPAIR_YELLOWBLACK, 0);
+                Game_Log(game, "Wear / wield / remove / put away which item? (a - j)", CONSOLECOLORPAIR_YELLOWBLACK, 0);
 
+                Console_Clear(game->console);
                 Game_RenderUI(game);
                 Console_SetCursor(game->console, 0);
                 Console_Refresh(game->console);
@@ -309,6 +395,22 @@ void Game_HandleInput(Game *game)
                 Game_Log(game, "You ascend the stairs.", CONSOLECOLORPAIR_WHITEBLACK, 0);
                 Console_Clear(game->console);
             }
+
+            /*
+            // '*' == DEBUG: GENERATE NEW FLOOR
+
+            if(game->key == '*')
+            {
+                game->map->level++;
+                MapTile_RemoveObject(Map_GetTile(game->map, game->map->player->position), game->map->player);
+                Map_Clear(game->map);
+                Map_Generate(game->map);
+
+                Map_ResetObjectView(game->map, game->map->player);
+                Map_PlaceObject(game->map, game->map->player);
+                Console_Clear(game->console);
+            }
+            */
 
             // Movement
 
@@ -448,6 +550,8 @@ void Game_MapObjectTakesTurn(Game *game, Map *map, MapObject *mapObject)
 {
     mapObject->turnTicks = mapObject->turnTicksSize;
 
+    MapObject_UpdateAttributes(mapObject);
+
     if(mapObject->flags & MAPOBJECTFLAG_ISLIVING)
     {
         if(mapObject->o2 == 0)
@@ -574,7 +678,7 @@ void Game_RenderUI(Game *game)
     {
         Rect2D rect;
         rect.position = (Point2D){ 0, 0 };
-        rect.size = (Size2D){ 25, 15 };
+        rect.size = (Size2D){ 35, 15 };
         wchar_t wchrs[6] = { L'═', L'║', L'╔', L'╗', L'╝', L'╚' };
         Console_DrawRect(game->console, rect, wchrs, CONSOLECOLORPAIR_WHITEBLACK, 0);
 
@@ -583,9 +687,20 @@ void Game_RenderUI(Game *game)
         for(int i = 0; i < 10; i++)
         {
             char *str = "...";
+            char *strExtra = " ";
+            int colorPair = CONSOLECOLORPAIR_WHITEBLACK;
             if(i < game->map->player->itemsCount)
+            {
                 str = game->map->player->items[i]->description;
-            Console_WriteF(game->console, 3 + i, 2, CONSOLECOLORPAIR_WHITEBLACK, 0, "%c. %s", 'a' + i, str);
+                
+                int equippedAt = MapObject_GetEquippedAt(game->map->player, game->map->player->items[i]);
+                if(equippedAt > -1)
+                {
+                    strExtra = (equippedAt == MAPOBJECTEQUIPAT_BODY) ? "(wearing)" : "(ready)";
+                    colorPair = CONSOLECOLORPAIR_YELLOWBLACK;
+                }
+            }
+            Console_WriteF(game->console, 3 + i, 3, colorPair, 0, "%c. %s %s", 'a' + i, str, strExtra);
         }
     }
 }
