@@ -5,6 +5,7 @@
 
 #define COMMAND_LOOK          0
 #define COMMAND_OPENCLOSE     1
+#define COMMAND_WEARWIELD     2
 
 #define SCREEN_HELP     0
 #define SCREEN_MAIN     1

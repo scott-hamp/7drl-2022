@@ -97,7 +97,15 @@ void Game_HandleInput(Game *game)
             if(game->key == 27) // Esc.
             {
                 game->commandActive = -1;
+
                 Game_Log(game, "Nevermind.", CONSOLECOLORPAIR_WHITEBLACK, 0);
+
+                if(game->uiInventoryOpen)
+                {
+                    game->uiInventoryOpen = false;
+                    Console_Clear(game->console);
+                    Map_RenderForPlayer(game->map, game->console);
+                }
 
                 Game_RenderUI(game);
                 Console_SetCursor(game->console, 1);
@@ -105,6 +113,8 @@ void Game_HandleInput(Game *game)
                 Console_Refresh(game->console);
                 return;
             }
+
+            // Command: Look
 
             if(game->commandActive == COMMAND_LOOK)
             {
@@ -124,6 +134,8 @@ void Game_HandleInput(Game *game)
                 Console_Refresh(game->console);
                 return;
             }
+
+            // Command: Open / Close
 
             if(game->commandActive == COMMAND_OPENCLOSE)
             {
@@ -186,26 +198,34 @@ void Game_HandleInput(Game *game)
         }
         else
         {
-            if(game->key == 105 || (game->key == 27 && game->uiInventoryOpen)) // 'i' == Inventory
+            // 'i' == Inventory
+
+            if(game->key == 105 || (game->key == 27 && game->uiInventoryOpen))
             {
                 game->uiInventoryOpen = !game->uiInventoryOpen;
 
+                Console_Clear(game->console);
+
                 if(!game->uiInventoryOpen)
-                {
-                    Console_Clear(game->console);
                     Map_Render(game->map, game->map->player, game->console);
-                }
+
                 Game_RenderUI(game);
+
                 if(game->uiInventoryOpen)
                     Console_SetCursor(game->console, 0);
                 else
                     Console_SetCursor(game->console, 1);
+
                 Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->map->player->position.x, game->map->renderOffset.y + game->map->player->position.y });
                 Console_Refresh(game->console);
                 return;
             }
 
-            if(game->key == 44 || game->key == 103) // 'g' / ',' == Get
+            if(game->uiInventoryOpen) return;
+
+            // 'g' / ',' == Get
+
+            if(game->key == 44 || game->key == 103)
             {
                 MapObjectAction *action = MapObjectAction_Create(MAPOBJECTACTIONTYPE_PICKUP);
                 action->object = game->map->player;
@@ -228,7 +248,9 @@ void Game_HandleInput(Game *game)
                 Game_MapNextTurn(game, game->map);
             }
 
-            if(game->key == 111) // 'o' == Open / Close
+            // 'o' == Open / Close
+
+            if(game->key == 111)
             {
                 game->commandActive = COMMAND_OPENCLOSE;
                 Game_Log(game, "Open / close in which direction?", CONSOLECOLORPAIR_YELLOWBLACK, 0);
@@ -239,7 +261,24 @@ void Game_HandleInput(Game *game)
                 return;
             }
 
-            if(game->key == 120) // 'x' == Look
+            // 'w' == Wear / wield
+
+            if(game->key == 119)
+            {
+                game->commandActive = COMMAND_WEARWIELD;
+                game->uiInventoryOpen = true;
+
+                Game_Log(game, "Wear / wield which item? (a - j)", CONSOLECOLORPAIR_YELLOWBLACK, 0);
+
+                Game_RenderUI(game);
+                Console_SetCursor(game->console, 0);
+                Console_Refresh(game->console);
+                return;
+            }
+        
+            // 'x' == Look
+
+            if(game->key == 120)
             {
                 game->commandActive = COMMAND_LOOK;
                 Game_Log(game, "Look at what? (direction, esc.) - Yourself.", CONSOLECOLORPAIR_YELLOWBLACK, 0);
@@ -252,7 +291,9 @@ void Game_HandleInput(Game *game)
                 return;
             }
         
-            if(game->key == 60) // '<' == Go up stairs
+            // '<' == Go up stairs
+
+            if(game->key == 60)
             {
                 MapObjectAction *action = MapObjectAction_Create(MAPOBJECTACTIONTYPE_USESTAIRS);
                 action->object = game->map->player;
@@ -268,6 +309,8 @@ void Game_HandleInput(Game *game)
                 Game_Log(game, "You ascend the stairs.", CONSOLECOLORPAIR_WHITEBLACK, 0);
                 Console_Clear(game->console);
             }
+
+            // Movement
 
             if(direction.x != 0 || direction.y != 0)
             {
@@ -287,12 +330,10 @@ void Game_HandleInput(Game *game)
 
                 MapObjectAction_Destroy(action);
             }
-            else
-            {
-                // Wait
-                if(game->key == 46 || game->key == 53)
-                    Game_MapNextTurn(game, game->map);
-            }
+            
+            // '.' / Numpad 5 == Wait
+            if(game->key == 46 || game->key == 53)
+                Game_MapNextTurn(game, game->map);
         }
 
         Map_UpdateObjectView(game->map, game->map->player);
@@ -533,17 +574,18 @@ void Game_RenderUI(Game *game)
     {
         Rect2D rect;
         rect.position = (Point2D){ 0, 0 };
-        rect.size = (Size2D){ 15, 15 };
-        Console_ClearRect(game->console, rect);
+        rect.size = (Size2D){ 25, 15 };
+        wchar_t wchrs[6] = { L'═', L'║', L'╔', L'╗', L'╝', L'╚' };
+        Console_DrawRect(game->console, rect, wchrs, CONSOLECOLORPAIR_WHITEBLACK, 0);
 
-        Console_Write(game->console, 0, 0, "Inventory: ", CONSOLECOLORPAIR_BLACKWHITE, 0);
+        Console_Write(game->console, 1, 2, "Inventory: ", CONSOLECOLORPAIR_BLACKWHITE, 0);
 
         for(int i = 0; i < 10; i++)
         {
-            char *str = "";
+            char *str = "...";
             if(i < game->map->player->itemsCount)
                 str = game->map->player->items[i]->description;
-            Console_WriteF(game->console, 2 + i, 1, CONSOLECOLORPAIR_WHITEBLACK, 0, "%c. %s", 'a' + i, str);
+            Console_WriteF(game->console, 3 + i, 2, CONSOLECOLORPAIR_WHITEBLACK, 0, "%c. %s", 'a' + i, str);
         }
     }
 }

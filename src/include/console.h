@@ -45,6 +45,7 @@ void Console_DrawBar(Console *console, int y, int x, size_t width, int value, in
 void Console_DrawBarW(Console *console, int y, int x, size_t width, int value, int valueMax, int colorPair, int attributes);
 void Console_FillRandomly(Console *console);
 void Console_FillRandomlyW(Console *console);
+void Console_DrawRect(Console *console, Rect2D rect, wchar_t wchrs[6], int colorPair, int attributes);
 char Console_Getch(Console *console);
 char *Console_GetString(Console *console, size_t size);
 void Console_MoveCursor(Console *console, Point2D point);

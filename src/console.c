@@ -81,6 +81,32 @@ void Console_DrawBarW(Console *console, int y, int x, size_t width, int value, i
         Console_SetCharW(console, y, x + xx, L'░', colorPair, attributes);
 }
 
+void Console_DrawRect(Console *console, Rect2D rect, wchar_t wchrs[6], int colorPair, int attributes)
+{
+    //│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌
+    // wchrs[6] = { L'─', L'│', L'┌', L'┐', L'┘', L'└' };
+    // wchrs[6] = { L'═', L'║', L'╔', L'╗', L'╝', L'╚' };
+
+    Console_ClearRect(console, rect);
+
+    for(int x = rect.position.x + 1; x < rect.position.x + rect.size.width - 1; x++)
+    {
+        Console_SetCharW(console, rect.position.y, rect.position.x + x, wchrs[0], colorPair, attributes);
+        Console_SetCharW(console, rect.position.y + rect.size.height - 1, rect.position.x + x, wchrs[0], colorPair, attributes);
+    }
+
+    for(int y = rect.position.y + 1; y < rect.position.y + rect.size.height - 1; y++)
+    {
+        Console_SetCharW(console, rect.position.y + y, rect.position.x, wchrs[1], colorPair, attributes);
+        Console_SetCharW(console, rect.position.y + y, rect.position.x + rect.size.width - 1, wchrs[1], colorPair, attributes);
+    }
+
+    Console_SetCharW(console, rect.position.y, rect.position.x, wchrs[2], colorPair, attributes);
+    Console_SetCharW(console, rect.position.y, rect.position.x + rect.size.width - 1, wchrs[3], colorPair, attributes);
+    Console_SetCharW(console, rect.position.y + rect.size.height - 1, rect.position.x + rect.size.width - 1, wchrs[4], colorPair, attributes);
+    Console_SetCharW(console, rect.position.y + rect.size.height - 1, rect.position.x, wchrs[5], colorPair, attributes);
+}
+
 void Console_FillRandomly(Console *console)
 {
     char *basicCharacterSet = "!\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
