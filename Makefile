@@ -36,8 +36,8 @@ else
 	LDFLAGS = -l$(CURSES) -lm
 endif
 
-PROJECTNAME = 7drl-2022
-VERSION = 1-0-0
+PROJECTNAME = from-the-depths
+VERSION = 7drl
 APPNAMESELF = $(PROJECTNAME)_v$(VERSION)
 
 ifeq ($(RELEASE),0)
@@ -46,7 +46,7 @@ else
 	ifeq ($(BUILD),linux)
 		APPNAME = release/linux/$(APPNAMESELF)_linux
 	else
-		APPNAME = release/win64/$(APPNAMESELF)_win64_${CURSES}
+		APPNAME = release/win64/$(APPNAMESELF)_win64-${CURSES}
 	endif
 endif
 
