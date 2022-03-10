@@ -22,26 +22,29 @@
 #define MAPOBJECTFLAG_CANMOVE               1 << 5
 #define MAPOBJECTFLAG_CANOPEN               1 << 6
 #define MAPOBJECTFLAG_HASINVENTORY          1 << 7
-#define MAPOBJECTFLAG_ISEQUIPMENT           1 << 8
-#define MAPOBJECTFLAG_ISHOSTILE             1 << 9
-#define MAPOBJECTFLAG_ISITEM                1 << 10
-#define MAPOBJECTFLAG_ISLIQUID              1 << 11
-#define MAPOBJECTFLAG_ISLIQUIDSOURCE        1 << 12
-#define MAPOBJECTFLAG_ISLIVING              1 << 13
-#define MAPOBJECTFLAG_ISOPEN                1 << 14
-#define MAPOBJECTFLAG_PLACEINDOORWAYS       1 << 15
-#define MAPOBJECTFLAG_PLACEINROOM           1 << 16
-#define MAPOBJECTFLAG_PLAYER                1 << 17
-#define MAPOBJECTFLAG_STAIRS                1 << 18
+#define MAPOBJECTFLAG_ISAQUATIC             1 << 9
+#define MAPOBJECTFLAG_ISEQUIPMENT           1 << 10
+#define MAPOBJECTFLAG_ISHOSTILE             1 << 11
+#define MAPOBJECTFLAG_ISITEM                1 << 12
+#define MAPOBJECTFLAG_ISLIQUID              1 << 13
+#define MAPOBJECTFLAG_ISLIQUIDSOURCE        1 << 14
+#define MAPOBJECTFLAG_ISLIVING              1 << 15
+#define MAPOBJECTFLAG_ISOPEN                1 << 16
+#define MAPOBJECTFLAG_PLACEINDOORWAYS       1 << 17
+#define MAPOBJECTFLAG_PLACEINROOM           1 << 18
+#define MAPOBJECTFLAG_PLACEINWATER          1 << 19
+#define MAPOBJECTFLAG_PLAYER                1 << 20
+#define MAPOBJECTFLAG_STAIRS                1 << 21
 
 #define MAPOBJECTID_PLAYER          0
-#define MAPOBJECTID_BILGERAT       1
+#define MAPOBJECTID_BILGERAT        1
 #define MAPOBJECTID_DIVEKNIFE       2
 #define MAPOBJECTID_DOOR            3
 #define MAPOBJECTID_LIFEVEST        4
 #define MAPOBJECTID_STAIRS          5
-#define MAPOBJECTID_WATER           6
-#define MAPOBJECTID_WATERSOURCE     7
+#define MAPOBJECTID_TIGERFISH       6
+#define MAPOBJECTID_WATER           7
+#define MAPOBJECTID_WATERSOURCE     8
 
 #define MAPOBJECTVIEW_UNSEEN        0
 #define MAPOBJECTVIEW_SEEN          1
@@ -74,6 +77,7 @@ typedef struct MapObject
     int attackBase, attackToHitBase, defenseBase;
     int attack, attackToHit, defense;
     int attackDistance;
+    char *attackVerbs[2];
     int colorPair;
     char *description;
     char *details;
@@ -83,6 +87,7 @@ typedef struct MapObject
     int height;
     int hp, o2;
     size_t hpMax, o2Max;
+    int hpRecoverTimer, hpRecoverTimerLength;
     int id;
     int layer;
     int lastRoomIndex;

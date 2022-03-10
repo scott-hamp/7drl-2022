@@ -1,17 +1,9 @@
 BUILD = linux
 # BUILD = { linux, win64 }
 # BUILDINDEX = { 0: linux, 1: win64 }
-CURSES = pdcurses
-# CURSES = { ncurses, ncursesw, pdcurses }
 RELEASE = 0
 
 WIN64 = x86_64-w64-mingw32
-
-ifeq ($(CURSES),ncursesw)
-	CURSESINDEX = 0
-else
-	CURSESINDEX = 1
-endif
 
 ifeq ($(BUILD),linux)
 	CC = gcc
@@ -22,19 +14,11 @@ endif
 ifeq ($(BUILD),linux)
 	CXXFLAGS = -std=c17 -w -DBUILDINDEX=0 -DRELEASE=${RELEASE}
 else
-	INCLUDELINK = -I$(WIN64)/$(CURSES)/include -L$(WIN64)/$(CURSES)/lib
-	ifeq ($(CURSES),ncursesw)
-		CXXFLAGS = -std=c17 -w -DBUILDINDEX=1 -DCURSESINDEX=0 -DRELEASE=${RELEASE} ${INCLUDELINK}
-	else
-		CXXFLAGS = -std=c17 -w -mwindows -DBUILDINDEX=1 -DCURSESINDEX=1 -DRELEASE=${RELEASE} ${INCLUDELINK}
-	endif
+	INCLUDELINK = -I$(WIN64)/include -L$(WIN64)/lib
+	CXXFLAGS = -std=c17 -w -DBUILDINDEX=1 -DCURSESINDEX=0 -DRELEASE=${RELEASE} ${INCLUDELINK}
 endif
 
-ifeq ($(BUILD),linux)
-	LDFLAGS = -lncursesw -lm
-else
-	LDFLAGS = -l$(CURSES) -lm
-endif
+LDFLAGS = -lncursesw -lm
 
 PROJECTNAME = from-the-depths
 VERSION = 7drl
@@ -46,7 +30,7 @@ else
 	ifeq ($(BUILD),linux)
 		APPNAME = release/linux/$(APPNAMESELF)_linux
 	else
-		APPNAME = release/win64/$(APPNAMESELF)_win64-${CURSES}
+		APPNAME = release/win64/$(APPNAMESELF)_win64
 	endif
 endif
 

@@ -5,7 +5,8 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
     if(action->type == MAPOBJECTACTIONTYPE_ATTACK)
     {
         if(action->object == action->target) return action;
-        if(!(action->target->flags & MAPOBJECTFLAG_ISLIVING)) return action;
+        if(!(action->object->flags & MAPOBJECTFLAG_CANATTACK) || !(action->target->flags & MAPOBJECTFLAG_ISLIVING)) 
+            return action;
 
         int hit = action->object->attackToHit + (rand() % 20);
         if(hit <= action->target->defense) return action;
@@ -15,7 +16,13 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
         if(action->target->hp <= 0)
         {
             action->target->hp = 0;
-            action->target->flags ^= ~MAPOBJECTFLAG_ISLIVING;
+            action->target->flags &= ~MAPOBJECTFLAG_ISLIVING;
+            if(action->target != map->player)
+            {
+                MapTile_RemoveObject(Map_GetTile(map, action->target->position), action->target);
+                Map_DestroyObject(map, action->target);
+                action->target = NULL;
+            }
         }
 
         action->result = true;
@@ -103,19 +110,37 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
             return action;
         }
 
+        if(action->object->flags & MAPOBJECTFLAG_ISAQUATIC)
+        {
+            if(!(tile->passable & MAPTILEPASSABLE_LIQUID) || MapTile_GetObjectWithFlags(tile, MAPOBJECTFLAG_ISLIQUID) == NULL)
+            {
+                action->resultMessage = "Point does not have water.";
+                return action;
+            }
+        }
+
         if(!(tile->passable & MAPTILEPASSABLE_SOLID))
         {
-            if(tile->objectsCount > 0)
+            MapObject *target = NULL;
+            
+            if(action->object == map->player)
             {
-                for(int i = 0; i < tile->objectsCount; i++)
+                target = MapTile_GetObjectWithFlags(tile, MAPOBJECTFLAG_ISHOSTILE);
+                if(target != NULL)
                 {
-                    if(!(tile->objects[i]->flags & MAPOBJECTFLAG_CANOPEN)) continue;
-                    
-                    action->type = MAPOBJECTACTIONTYPE_OPEN;
-                    action->target = tile->objects[i];
-                    action->to = action->target->position;
+                    action->type = MAPOBJECTACTIONTYPE_ATTACK;
+                    action->target = target;
                     return Map_AttemptObjectAction(map, action);
                 }
+            }
+
+            target = MapTile_GetObjectWithFlags(tile, MAPOBJECTFLAG_CANOPEN);
+            if(target != NULL)
+            {
+                action->type = MAPOBJECTACTIONTYPE_OPEN;
+                action->target = target;
+                action->to = action->target->position;
+                return Map_AttemptObjectAction(map, action);
             }
 
             action->resultMessage = "Tile impassable.";
@@ -249,18 +274,22 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
     if(id == MAPOBJECTID_BILGERAT) // Bilge rat
     {
         mapObject->attackBase = 1;
-        mapObject->attackToHitBase = 1;
+        mapObject->attackDistance = 1;
+        mapObject->attackToHitBase = -2;
+        mapObject->attackVerbs[0] = "bite";
+        mapObject->attackVerbs[1] = "bites";
+        mapObject->colorPair = CONSOLECOLORPAIR_YELLOWBLACK;
         mapObject->defenseBase = 1;
         mapObject->description = "A bilge rat.";
         mapObject->layer = 1;
         mapObject->name = "bilge rat";
-        mapObject->flags |= (MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_ISHOSTILE | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLACEINROOM);
+        mapObject->flags |= (MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_CANATTACK | MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_ISHOSTILE | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLACEINROOM);
         mapObject->hp = 3;
         mapObject->hpMax = 3;
         mapObject->o2 = 5;
         mapObject->o2Max = 5;
-        mapObject->turnTicks = 5;
-        mapObject->turnTicksSize = 5;
+        mapObject->turnTicks = 8;
+        mapObject->turnTicksSize = 8;
         mapObject->wchr = L'r';
         mapObject->wchrAlt = L'r';
         hasView = true;
@@ -270,15 +299,19 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
     {
         mapObject->attackBase = 1;
         mapObject->attackToHitBase = 1;
+        mapObject->attackVerbs[0] = "hit";
+        mapObject->attackVerbs[1] = "hits";
         mapObject->defenseBase = 3;
         mapObject->description = "Yourself.";
-        mapObject->layer = 1;
+        mapObject->hpRecoverTimer = 25;
+        mapObject->hpRecoverTimerLength = 25;
+        mapObject->layer = 0;
         mapObject->name = "Player";
-        mapObject->flags |= (MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLACEINROOM | MAPOBJECTFLAG_PLAYER);
+        mapObject->flags |= (MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_CANATTACK | MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLACEINROOM | MAPOBJECTFLAG_PLAYER);
         mapObject->hp = 10;
         mapObject->hpMax = 10;
-        mapObject->o2 = 20;
-        mapObject->o2Max = 20;
+        mapObject->o2 = 30;
+        mapObject->o2Max = 30;
         mapObject->turnTicks = 10;
         mapObject->turnTicksSize = 10;
         mapObject->wchr = L'@';
@@ -321,6 +354,28 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->flags |= (MAPOBJECTFLAG_ISEQUIPMENT | MAPOBJECTFLAG_ISITEM);
         mapObject->wchr = L'(';
         mapObject->wchrAlt = L'(';
+    }
+
+    if(id == MAPOBJECTID_TIGERFISH) // Tigerfish
+    {
+        mapObject->attackBase = 2;
+        mapObject->attackDistance = 1;
+        mapObject->attackToHitBase = 1;
+        mapObject->attackVerbs[0] = "bite";
+        mapObject->attackVerbs[1] = "bites";
+        mapObject->colorPair = CONSOLECOLORPAIR_GREENBLACK;
+        mapObject->defenseBase = 1;
+        mapObject->description = "A tigerfish.";
+        mapObject->layer = 1;
+        mapObject->name = "tigerfish";
+        mapObject->flags |= (MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_CANATTACK | MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_ISAQUATIC | MAPOBJECTFLAG_ISHOSTILE | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLACEINWATER);
+        mapObject->hp = 5;
+        mapObject->hpMax = 5;
+        mapObject->turnTicks = 12;
+        mapObject->turnTicksSize = 12;
+        mapObject->wchr = L'f';
+        mapObject->wchrAlt = L'f';
+        hasView = true;
     }
 
     if(id == MAPOBJECTID_WATER) // Water
@@ -743,6 +798,7 @@ int Map_GetSimpleDistance(Map *map, Point2D from, Point2D to)
         if(to.x < from.x) from.x--;
         if(to.y > from.y) from.y++;
         if(to.y < from.y) from.y--;
+        distance++;
     }
 
     return distance;
@@ -819,13 +875,35 @@ void Map_PlaceObject(Map *map, MapObject *mapObject)
         }
         else
         {
-            point = (Point2D){ room->position.x + 1 + rand() % (room->size.width - 2), room->position.y + 1 + rand() % (room->size.height - 2) };
-        
-            if(point.x < 1 || point.y < 1 || point.x >= map->size.width - 1 || point.y >= map->size.height - 1) 
-                continue;
-
-            tile = Map_GetTile(map, point);
+            if(mapObject->flags & MAPOBJECTFLAG_PLACEINROOM)
+            {
+                point = (Point2D){ room->position.x + 1 + rand() % (room->size.width - 2), room->position.y + 1 + rand() % (room->size.height - 2) };
             
+                if(point.x < 1 || point.y < 1 || point.x >= map->size.width - 1 || point.y >= map->size.height - 1) 
+                    continue;
+
+                tile = Map_GetTile(map, point);
+                
+                if(!(tile->passable & MAPTILEPASSABLE_SOLID)) continue;
+            }
+
+            if(mapObject->flags & MAPOBJECTFLAG_PLACEINWATER)
+            {
+                if(tile == NULL)
+                {
+                    point = (Point2D){ 1 + rand() % (map->size.width - 2), 1 + rand() % (map->size.height - 2) };
+                    tile = Map_GetTile(map, point);
+                }
+                
+                if(!(tile->passable & MAPTILEPASSABLE_LIQUID)) continue;
+                if(MapTile_GetObjectWithFlags(tile, MAPOBJECTFLAG_ISLIQUID) == NULL) continue;
+            }
+        }
+
+        if(tile == NULL)
+        {
+            point = (Point2D){ 1 + rand() % (map->size.width - 2), 1 + rand() % (map->size.height - 2) };
+            tile = Map_GetTile(map, point);
             if(!(tile->passable & MAPTILEPASSABLE_SOLID)) continue;
         }
 
@@ -1023,6 +1101,8 @@ MapObject *MapObject_Create(const char *name)
     mapObject->equipAt = -1;
     mapObject->hp = 0;
     mapObject->hpMax = 0;
+    mapObject->hpRecoverTimer = 0;
+    mapObject->hpRecoverTimerLength = 0;
     mapObject->lastRoomIndex = -1;
     mapObject->name = name;
     mapObject->o2 = 0;

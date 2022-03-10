@@ -426,12 +426,29 @@ void Game_HandleInput(Game *game)
 
                 action = Map_AttemptObjectAction(game->map, action);
 
-                if(action->result)
+                if(action->type == MAPOBJECTACTIONTYPE_ATTACK)
                 {
-                    Game_MapNextTurn(game, game->map);
+                    if(action->result)
+                    {
+                        if(action->target == NULL)
+                            Game_Log(game, "You kill it!", CONSOLECOLORPAIR_WHITEBLACK, 0);
+                        else
+                            Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "You hit the %s!", action->target->name);
+                    }
+                    else
+                        Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "You try to hit the %s, but miss!", action->target->name);
 
-                    if(action->type == MAPOBJECTACTIONTYPE_OPEN)
-                        Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "You open the %s.", action->target->name);
+                    Game_MapNextTurn(game, game->map);
+                }
+                else
+                {
+                    if(action->result)
+                    {
+                        Game_MapNextTurn(game, game->map);
+
+                        if(action->type == MAPOBJECTACTIONTYPE_OPEN)
+                            Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "You open the %s.", action->target->name);
+                    }
                 }
 
                 MapObjectAction_Destroy(action);
@@ -444,18 +461,8 @@ void Game_HandleInput(Game *game)
 
         Map_UpdateObjectView(game->map, game->map->player);
 
-        #if CURSESINDEX == 0
-            Map_Render(game->map, game->map->player, game->console);
-            game->refreshMap = false;
-        #else
-            if(game->refreshMap)
-            {
-                Map_Render(game->map, game->map->player, game->console);
-                game->refreshMap = false;
-            }
-            else
-                Map_RenderForPlayer(game->map, game->console);
-        #endif
+        Map_Render(game->map, game->map->player, game->console);
+        game->refreshMap = false;
 
         Game_RenderUI(game);
 
@@ -533,6 +540,21 @@ void Game_MapNextTurn(Game *game, Map *map)
         if(map->levelFloodTimerSize > 10) map->levelFloodTimerSize -= 7 + rand() % 3;
         map->levelFloodTimer = map->levelFloodTimerSize;
 
+        int aquaticMonsterIDs[10];
+        aquaticMonsterIDs[0] = MAPOBJECTID_TIGERFISH;
+        aquaticMonsterIDs[1] = MAPOBJECTID_TIGERFISH;
+        aquaticMonsterIDs[2] = MAPOBJECTID_TIGERFISH;
+        aquaticMonsterIDs[3] = MAPOBJECTID_TIGERFISH;
+        aquaticMonsterIDs[4] = MAPOBJECTID_TIGERFISH;
+        aquaticMonsterIDs[5] = MAPOBJECTID_TIGERFISH;
+        aquaticMonsterIDs[6] = MAPOBJECTID_TIGERFISH;
+        aquaticMonsterIDs[7] = MAPOBJECTID_TIGERFISH;
+        aquaticMonsterIDs[8] = MAPOBJECTID_TIGERFISH;
+        aquaticMonsterIDs[9] = MAPOBJECTID_TIGERFISH;
+
+        for(int i = 0; i < rand() % 3; i++)
+            Map_PlaceObject(map, Map_CreateObject(map, aquaticMonsterIDs[rand() % 10]));
+
         Game_Log(game, "The ship groans and water rushes upwards!", CONSOLECOLORPAIR_CYANBLACK, 0);
     }
 
@@ -563,84 +585,121 @@ void Game_MapNextTurn(Game *game, Map *map)
 
 void Game_MapObjectTakesTurn(Game *game, Map *map, MapObject *mapObject)
 {
-    mapObject->turnTicks = mapObject->turnTicksSize;
+    if(mapObject == map->player && mapObject->hp <= 0 && !game->deathMessageLogged)
+    {
+        game->deathMessageLogged = true;
+        Game_Log(game, "YOU DIE! GAME OVER!", CONSOLECOLORPAIR_REDBLACK, A_BOLD);
+        return;
+    }
 
-    MapObject_UpdateAttributes(mapObject);
+    mapObject->turnTicks = mapObject->turnTicksSize;
 
     if(mapObject->flags & MAPOBJECTFLAG_ISLIVING)
     {
-        if(mapObject->o2 == 0)
-            mapObject->hp--;
-            
-        if(mapObject->hp == 0)
+        if(mapObject->hp < mapObject->hpMax && mapObject->hpRecoverTimerLength > 0)
         {
-            mapObject->flags ^= MAPOBJECTFLAG_ISLIVING;
-            if(mapObject == map->player && !game->deathMessageLogged)
+            mapObject->hpRecoverTimer--;
+            if(mapObject->hpRecoverTimer <= 0)
             {
-                game->deathMessageLogged = true;
-                if(mapObject->o2 == 0)
-                    Game_Log(game, "YOU DROWN! GAME OVER!", CONSOLECOLORPAIR_REDBLACK, A_BOLD);
-                else
-                    Game_Log(game, "YOU DIE! GAME OVER!", CONSOLECOLORPAIR_REDBLACK, A_BOLD);
+                mapObject->hpRecoverTimer += mapObject->hpRecoverTimerLength;
+                mapObject->hp++;
             }
         }
 
-        MapTile *tile = Map_GetTile(map, mapObject->position);
-
-        if(tile->objectsCount > 0)
+        if(!(mapObject->flags & MAPOBJECTFLAG_ISAQUATIC) && mapObject->o2 == 0)
+            mapObject->hp--;
+        
+        if(mapObject->hp <= 0)
         {
-            for(int i = 0; i < tile->objectsCount; i++)
+            mapObject->hp = 0;
+            mapObject->flags &= ~MAPOBJECTFLAG_ISLIVING;
+            if(mapObject == map->player)
             {
-                if(!(tile->objects[i]->flags & MAPOBJECTFLAG_ISLIQUID))
-                    continue;
-                if(tile->objects[i]->height < 5) break;
+                if(!game->deathMessageLogged)
+                {
+                    game->deathMessageLogged = true;
+                    if(mapObject->o2 == 0)
+                        Game_Log(game, "YOU DROWN! GAME OVER!", CONSOLECOLORPAIR_REDBLACK, A_BOLD);
+                }
+            }
+            else
+            {
+                MapTile_RemoveObject(Map_GetTile(map, mapObject->position), mapObject);
+                Map_DestroyObject(map, mapObject);
+            }
+        }
 
-                if(mapObject->o2 > 0) mapObject->o2--;
-                return;
+        MapObject_UpdateAttributes(mapObject);
+
+        if(!(mapObject->flags & MAPOBJECTFLAG_ISAQUATIC))
+        {
+            MapTile *tile = Map_GetTile(map, mapObject->position);
+
+            if(tile->objectsCount > 0)
+            {
+                for(int i = 0; i < tile->objectsCount; i++)
+                {
+                    if(!(tile->objects[i]->flags & MAPOBJECTFLAG_ISLIQUID))
+                        continue;
+                    if(tile->objects[i]->height < 5) break;
+
+                    if(mapObject->o2 > 0) mapObject->o2--;
+                    return;
+                }
             }
         }
 
         if(mapObject->o2 < mapObject->o2Max) mapObject->o2++;
-    }
 
-    if(mapObject == map->player) return;
+        if(mapObject == map->player) return;
 
-    if(mapObject->flags & MAPOBJECTFLAG_ISHOSTILE)
-    {
-        if(!(map->player->flags & MAPOBJECTFLAG_ISLIVING)) return;
-
-        for(int y = 0; y < map->size.height - 1; y++)
+        if(mapObject->flags & MAPOBJECTFLAG_ISHOSTILE)
         {
-            for(int x = 0; x < map->size.width - 1; x++)
+            for(int y = 0; y < map->size.height - 1; y++)
             {
-                int view = Map_GetObjectView(map, mapObject, (Point2D){ x, y });
-                if(view != MAPOBJECTVIEW_VISIBLE) continue;
-
-                if(map->player->position.x != x || map->player->position.y != y)
-                    continue;
-
-                int distance = Map_GetSimpleDistance(map, mapObject->position, map->player->position);
-                if(distance <= mapObject->attackDistance)
+                for(int x = 0; x < map->size.width - 1; x++)
                 {
-                    MapObjectAction *action = MapObjectAction_Create(MAPOBJECTACTIONTYPE_ATTACK);
-                    action->object = mapObject;
-                    action->target = map->player;
+                    int view = Map_GetObjectView(map, mapObject, (Point2D){ x, y });
+                    if(view != MAPOBJECTVIEW_VISIBLE) continue;
 
-                    if(!action->result)
+                    if(map->player->position.x != x || map->player->position.y != y)
+                        continue;
+
+                    int distance = Map_GetSimpleDistance(map, mapObject->position, map->player->position);
+                    if(distance <= mapObject->attackDistance)
                     {
-                        Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "The %s tries to hit you, but misses!", mapObject->name);
+                        MapObjectAction *action = MapObjectAction_Create(MAPOBJECTACTIONTYPE_ATTACK);
+                        action->object = mapObject;
+                        action->target = map->player;
+                        Map_AttemptObjectAction(map, action);
+
+                        if(!action->result)
+                        {
+                            Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "The %s tries to %s you, but misses!", mapObject->name, mapObject->attackVerbs[0]);
+                            return;
+                        }
+
+                        Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "The %s %s you! (-%d)", mapObject->name, mapObject->attackVerbs[1], action->resultValueInt);
+                        
+                        MapObjectAction_Destroy(action);
                         return;
                     }
 
-                    Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "The %s hits you! (-%d)", mapObject->name, action->resultValueInt);
-                    
+                    Direction2D direction = (Direction2D){ 0, 0 };
+                    if(map->player->position.x > mapObject->position.x) direction.x = 1;
+                    if(map->player->position.x < mapObject->position.x) direction.x = -1;
+                    if(map->player->position.y > mapObject->position.y) direction.y = 1;
+                    if(map->player->position.y < mapObject->position.y) direction.y = -1;
+                    MapObjectAction *action = MapObjectAction_Create(MAPOBJECTACTIONTYPE_MOVE);
+                    action->direction = direction;
+                    action->object = mapObject;
+                    Map_AttemptObjectAction(map, action);
                     MapObjectAction_Destroy(action);
-                    return;
                 }
-
-                //...
             }
         }
+
+        return;
     }
 
     if(mapObject->flags & MAPOBJECTFLAG_ISLIQUID)

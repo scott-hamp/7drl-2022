@@ -5,13 +5,8 @@
 
 #if BUILDINDEX == 0
     #define _XOPEN_SOURCE_EXTENDED
-    #include <ncursesw/curses.h>
-#else
-    #if CURSESINDEX == 1
-        #define PDC_DLL_BUILD
-    #endif
-    #include <curses.h>
 #endif
+#include <ncursesw/curses.h>
 
 #include "geometry.h"
 
