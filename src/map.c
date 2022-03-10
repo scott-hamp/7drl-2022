@@ -410,7 +410,7 @@ void Map_Generate(Map *map)
         for(int i = 0; i < map->roomsCount; i++)
         {
             Rect2D *room = map->rooms[i];
-            if(room->position.x < 2 || room->position.y < 2 || room->position.x + room->size.width >= map->size.width - 2 || room->position.y + room->size.height >= map->size.height - 2)
+            if(room->position.x < 3 || room->position.y < 3 || room->position.x + room->size.width >= map->size.width - 3 || room->position.y + room->size.height >= map->size.height - 3)
             {
                 toContinue = true;
                 break;
@@ -822,7 +822,7 @@ void Map_RenderRect(Map *map, MapObject *viewer, Console *console, Rect2D rect)
                     if(view == MAPOBJECTVIEW_SEEN)
                     {
                         if(tile->type == MAPTILETYPE_FLOOR)
-                            wchr = (Map_GetRoomIndexContaining(map, mapPoint) > -1) ? L' ' : L'░';
+                            wchr = (Map_GetRoomIndexContaining(map, mapPoint) > -1) ? L' ' : L'#';
                         if(tile->type == MAPTILETYPE_WALL)
                             wchr = Map_GetPointWChr(map, mapPoint);
                     }
