@@ -628,7 +628,8 @@ wchar_t Map_GetPointWChr(Map *map, Point2D point)
     //░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀
 
     if(tile->type == MAPTILETYPE_FLOOR)
-        return (Map_GetRoomIndexContaining(map, (Point2D){ point.x, point.y }) > -1) ? L'.' : L'▒';
+        //return (Map_GetRoomIndexContaining(map, (Point2D){ point.x, point.y }) > -1) ? L'.' : L'▓';
+        return L'.';
     if(tile->type == MAPTILETYPE_WALL)
     {
         wchar_t wchr = L' ';
@@ -795,6 +796,8 @@ void Map_RenderForPlayer(Map *map, Console *console)
 
 void Map_RenderRect(Map *map, MapObject *viewer, Console *console, Rect2D rect)
 {
+    //░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀
+
     for(int y = 0; y < map->size.height; y++)
     {
         for(int x = 0; x < map->size.width; x++)
@@ -822,7 +825,7 @@ void Map_RenderRect(Map *map, MapObject *viewer, Console *console, Rect2D rect)
                     if(view == MAPOBJECTVIEW_SEEN)
                     {
                         if(tile->type == MAPTILETYPE_FLOOR)
-                            wchr = (Map_GetRoomIndexContaining(map, mapPoint) > -1) ? L' ' : L'#';
+                            wchr = (Map_GetRoomIndexContaining(map, mapPoint) > -1) ? L' ' : L'░';
                         if(tile->type == MAPTILETYPE_WALL)
                             wchr = Map_GetPointWChr(map, mapPoint);
                     }

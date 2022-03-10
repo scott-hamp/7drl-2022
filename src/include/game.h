@@ -29,6 +29,7 @@ typedef struct Game
     LogMessage *log[UINT16_MAX];
     size_t logSize;
     Map *map;
+    bool refreshMap;
     int screen;
     uint64_t turn;
     bool uiInventoryOpen;

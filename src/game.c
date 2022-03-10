@@ -7,6 +7,7 @@ Game *Game_Create(Console *console)
     game->commandActive = -1;
     game->console = console;
     game->map = Map_Create((Size2D){ 80, 20 }, (Point2D){ 0, 0 });
+    game->refreshMap = false;
     game->screen = SCREEN_TITLE;
     game->turn = 1;
     game->uiInventoryOpen = false;
@@ -104,7 +105,7 @@ void Game_HandleInput(Game *game)
                 {
                     game->uiInventoryOpen = false;
                     Console_Clear(game->console);
-                    Map_RenderForPlayer(game->map, game->console);
+                    Map_Render(game->map, game->map->player, game->console);
                 }
 
                 Game_RenderUI(game);
@@ -141,6 +142,7 @@ void Game_HandleInput(Game *game)
                 Game_Log(game, action->resultMessage, CONSOLECOLORPAIR_WHITEBLACK, 0);
 
                 MapObjectAction_Destroy(action);
+                game->refreshMap = true;
                 game->uiInventoryOpen = false;
                 game->commandActive = -1;
                 Console_Clear(game->console);
@@ -258,6 +260,7 @@ void Game_HandleInput(Game *game)
                 Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, action->resultMessage, action->targetItem->name);
 
                 MapObjectAction_Destroy(action);
+                game->refreshMap = true;
                 game->uiInventoryOpen = false;
                 game->commandActive = -1;
                 Console_Clear(game->console);
@@ -440,7 +443,13 @@ void Game_HandleInput(Game *game)
 
         Map_UpdateObjectView(game->map, game->map->player);
 
-        Map_RenderForPlayer(game->map, game->console);
+        if(game->refreshMap)
+        {
+            Map_Render(game->map, game->map->player, game->console);
+            game->refreshMap = false;
+        }
+        else
+            Map_RenderForPlayer(game->map, game->console);
 
         Game_RenderUI(game);
 
