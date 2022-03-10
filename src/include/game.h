@@ -25,6 +25,7 @@ typedef struct Game
     int commandActive;
     Point2D commandPoint;
     Console *console;
+    bool deathMessageLogged;
     char key;
     LogMessage *log[UINT16_MAX];
     size_t logSize;

@@ -6,6 +6,7 @@ Game *Game_Create(Console *console)
     game->active = true;
     game->commandActive = -1;
     game->console = console;
+    game->deathMessageLogged = false;
     game->map = Map_Create((Size2D){ 80, 20 }, (Point2D){ 0, 0 });
     game->refreshMap = false;
     game->screen = SCREEN_TITLE;
@@ -443,13 +444,18 @@ void Game_HandleInput(Game *game)
 
         Map_UpdateObjectView(game->map, game->map->player);
 
-        if(game->refreshMap)
-        {
+        #if CURSESINDEX == 0
             Map_Render(game->map, game->map->player, game->console);
             game->refreshMap = false;
-        }
-        else
-            Map_RenderForPlayer(game->map, game->console);
+        #else
+            if(game->refreshMap)
+            {
+                Map_Render(game->map, game->map->player, game->console);
+                game->refreshMap = false;
+            }
+            else
+                Map_RenderForPlayer(game->map, game->console);
+        #endif
 
         Game_RenderUI(game);
 
@@ -564,13 +570,18 @@ void Game_MapObjectTakesTurn(Game *game, Map *map, MapObject *mapObject)
     if(mapObject->flags & MAPOBJECTFLAG_ISLIVING)
     {
         if(mapObject->o2 == 0)
-        {
             mapObject->hp--;
-            if(mapObject->hp == 0)
+            
+        if(mapObject->hp == 0)
+        {
+            mapObject->flags ^= MAPOBJECTFLAG_ISLIVING;
+            if(mapObject == map->player && !game->deathMessageLogged)
             {
-                mapObject->flags ^= MAPOBJECTFLAG_ISLIVING;
-                if(mapObject == map->player)
+                game->deathMessageLogged = true;
+                if(mapObject->o2 == 0)
                     Game_Log(game, "YOU DROWN! GAME OVER!", CONSOLECOLORPAIR_REDBLACK, A_BOLD);
+                else
+                    Game_Log(game, "YOU DIE! GAME OVER!", CONSOLECOLORPAIR_REDBLACK, A_BOLD);
             }
         }
 
@@ -593,6 +604,44 @@ void Game_MapObjectTakesTurn(Game *game, Map *map, MapObject *mapObject)
     }
 
     if(mapObject == map->player) return;
+
+    if(mapObject->flags & MAPOBJECTFLAG_ISHOSTILE)
+    {
+        if(!(map->player->flags & MAPOBJECTFLAG_ISLIVING)) return;
+
+        for(int y = 0; y < map->size.height - 1; y++)
+        {
+            for(int x = 0; x < map->size.width - 1; x++)
+            {
+                int view = Map_GetObjectView(map, mapObject, (Point2D){ x, y });
+                if(view != MAPOBJECTVIEW_VISIBLE) continue;
+
+                if(map->player->position.x != x || map->player->position.y != y)
+                    continue;
+
+                int distance = Map_GetSimpleDistance(map, mapObject->position, map->player->position);
+                if(distance <= mapObject->attackDistance)
+                {
+                    MapObjectAction *action = MapObjectAction_Create(MAPOBJECTACTIONTYPE_ATTACK);
+                    action->object = mapObject;
+                    action->target = map->player;
+
+                    if(!action->result)
+                    {
+                        Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "The %s tries to hit you, but misses!", mapObject->name);
+                        return;
+                    }
+
+                    Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "The %s hits you! (-%d)", mapObject->name, action->resultValueInt);
+                    
+                    MapObjectAction_Destroy(action);
+                    return;
+                }
+
+                //...
+            }
+        }
+    }
 
     if(mapObject->flags & MAPOBJECTFLAG_ISLIQUID)
     {
@@ -687,7 +736,7 @@ void Game_RenderUI(Game *game)
     {
         Rect2D rect;
         rect.position = (Point2D){ 0, 0 };
-        rect.size = (Size2D){ 35, 15 };
+        rect.size = (Size2D){ 50, 15 };
         wchar_t wchrs[6] = { L'═', L'║', L'╔', L'╗', L'╝', L'╚' };
         Console_DrawRect(game->console, rect, wchrs, CONSOLECOLORPAIR_WHITEBLACK, 0);
 
@@ -696,11 +745,13 @@ void Game_RenderUI(Game *game)
         for(int i = 0; i < 10; i++)
         {
             char *str = "...";
+            char *strDetails = " ";
             char *strExtra = " ";
             int colorPair = CONSOLECOLORPAIR_WHITEBLACK;
             if(i < game->map->player->itemsCount)
             {
                 str = game->map->player->items[i]->description;
+                strDetails = game->map->player->items[i]->details;
                 
                 int equippedAt = MapObject_GetEquippedAt(game->map->player, game->map->player->items[i]);
                 if(equippedAt > -1)
@@ -709,7 +760,7 @@ void Game_RenderUI(Game *game)
                     colorPair = CONSOLECOLORPAIR_YELLOWBLACK;
                 }
             }
-            Console_WriteF(game->console, 3 + i, 3, colorPair, 0, "%c. %s %s", 'a' + i, str, strExtra);
+            Console_WriteF(game->console, 3 + i, 3, colorPair, 0, "%c. %s %s %s", 'a' + i, str, strDetails, strExtra);
         }
     }
 }

@@ -3,12 +3,13 @@
 
 #include "console.h"
 
-#define MAPOBJECTACTIONTYPE_DROP            0
-#define MAPOBJECTACTIONTYPE_EQUIPUNEQUIP    1
-#define MAPOBJECTACTIONTYPE_MOVE            2
-#define MAPOBJECTACTIONTYPE_OPEN            3
-#define MAPOBJECTACTIONTYPE_PICKUP          4
-#define MAPOBJECTACTIONTYPE_USESTAIRS       5
+#define MAPOBJECTACTIONTYPE_ATTACK          0
+#define MAPOBJECTACTIONTYPE_DROP            1
+#define MAPOBJECTACTIONTYPE_EQUIPUNEQUIP    2
+#define MAPOBJECTACTIONTYPE_MOVE            3
+#define MAPOBJECTACTIONTYPE_OPEN            4
+#define MAPOBJECTACTIONTYPE_PICKUP          5
+#define MAPOBJECTACTIONTYPE_USESTAIRS       6
 
 #define MAPOBJECTEQUIPAT_BODY       0
 #define MAPOBJECTEQUIPAT_WEAPON     1
@@ -17,26 +18,30 @@
 #define MAPOBJECTFLAG_BLOCKSLIGHT           1 << 1
 #define MAPOBJECTFLAG_BLOCKSLIQUID          1 << 2
 #define MAPOBJECTFLAG_BLOCKSSOLID           1 << 3
-#define MAPOBJECTFLAG_CANMOVE               1 << 4
-#define MAPOBJECTFLAG_CANOPEN               1 << 5
-#define MAPOBJECTFLAG_HASINVENTORY          1 << 6
-#define MAPOBJECTFLAG_ISEQUIPMENT           1 << 7
-#define MAPOBJECTFLAG_ISITEM                1 << 8
-#define MAPOBJECTFLAG_ISLIQUID              1 << 9
-#define MAPOBJECTFLAG_ISLIQUIDSOURCE        1 << 10
-#define MAPOBJECTFLAG_ISLIVING              1 << 11
-#define MAPOBJECTFLAG_ISOPEN                1 << 12
-#define MAPOBJECTFLAG_PLACEINDOORWAYS       1 << 13
-#define MAPOBJECTFLAG_PLACEINROOM           1 << 14
-#define MAPOBJECTFLAG_PLAYER                1 << 15
-#define MAPOBJECTFLAG_STAIRS                1 << 16
+#define MAPOBJECTFLAG_CANATTACK             1 << 4
+#define MAPOBJECTFLAG_CANMOVE               1 << 5
+#define MAPOBJECTFLAG_CANOPEN               1 << 6
+#define MAPOBJECTFLAG_HASINVENTORY          1 << 7
+#define MAPOBJECTFLAG_ISEQUIPMENT           1 << 8
+#define MAPOBJECTFLAG_ISHOSTILE             1 << 9
+#define MAPOBJECTFLAG_ISITEM                1 << 10
+#define MAPOBJECTFLAG_ISLIQUID              1 << 11
+#define MAPOBJECTFLAG_ISLIQUIDSOURCE        1 << 12
+#define MAPOBJECTFLAG_ISLIVING              1 << 13
+#define MAPOBJECTFLAG_ISOPEN                1 << 14
+#define MAPOBJECTFLAG_PLACEINDOORWAYS       1 << 15
+#define MAPOBJECTFLAG_PLACEINROOM           1 << 16
+#define MAPOBJECTFLAG_PLAYER                1 << 17
+#define MAPOBJECTFLAG_STAIRS                1 << 18
 
 #define MAPOBJECTID_PLAYER          0
-#define MAPOBJECTID_DIVEKNIFE       1
-#define MAPOBJECTID_DOOR            2
-#define MAPOBJECTID_STAIRS          3
-#define MAPOBJECTID_WATER           4
-#define MAPOBJECTID_WATERSOURCE     5
+#define MAPOBJECTID_BILGERAT       1
+#define MAPOBJECTID_DIVEKNIFE       2
+#define MAPOBJECTID_DOOR            3
+#define MAPOBJECTID_LIFEVEST        4
+#define MAPOBJECTID_STAIRS          5
+#define MAPOBJECTID_WATER           6
+#define MAPOBJECTID_WATERSOURCE     7
 
 #define MAPOBJECTVIEW_UNSEEN        0
 #define MAPOBJECTVIEW_SEEN          1
@@ -56,6 +61,7 @@ typedef struct MapObjectAsItem
     int attack, attackToHit, defense;
     int colorPair;
     char *description;
+    char *details;
     int equipAt;
     uint32_t flags;
     int id;
@@ -67,8 +73,10 @@ typedef struct MapObject
 {
     int attackBase, attackToHitBase, defenseBase;
     int attack, attackToHit, defense;
+    int attackDistance;
     int colorPair;
     char *description;
+    char *details;
     int equipAt;
     MapObjectAsItem *equipment[2];
     uint32_t flags;
@@ -94,6 +102,7 @@ typedef struct MapObjectAction
     MapObject *object;
     bool result;
     char *resultMessage;
+    int resultValueInt;
     MapObject *target;
     MapObjectAsItem *targetItem;
     int type;
@@ -136,6 +145,7 @@ int Map_GetPointColorPair(Map *map, Point2D point);
 char *Map_GetPointDescription(Map *map, Point2D point);
 wchar_t Map_GetPointWChr(Map *map, Point2D point);
 int Map_GetRoomIndexContaining(Map *map, Point2D point);
+int Map_GetSimpleDistance(Map *map, Point2D from, Point2D to);
 MapTile *Map_GetTile(Map *map, Point2D point);
 void Map_MoveObject(Map *map, MapObject *mapObject, Point2D to);
 MapObjectAction *Map_ObjectAttemptActionAsTarget(Map *map, MapObject *mapObject, MapObjectAction *action);

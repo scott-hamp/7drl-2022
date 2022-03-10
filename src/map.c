@@ -2,6 +2,26 @@
 
 MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
 {
+    if(action->type == MAPOBJECTACTIONTYPE_ATTACK)
+    {
+        if(action->object == action->target) return action;
+        if(!(action->target->flags & MAPOBJECTFLAG_ISLIVING)) return action;
+
+        int hit = action->object->attackToHit + (rand() % 20);
+        if(hit <= action->target->defense) return action;
+
+        action->resultValueInt = action->object->attack;
+        action->target->hp -= action->resultValueInt;
+        if(action->target->hp <= 0)
+        {
+            action->target->hp = 0;
+            action->target->flags ^= ~MAPOBJECTFLAG_ISLIVING;
+        }
+
+        action->result = true;
+        return action;
+    }
+
     if(action->type == MAPOBJECTACTIONTYPE_DROP)
     {
         if(action->targetItem == NULL) return action;
@@ -226,6 +246,26 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
     mapObject->view = NULL;
     bool hasView = false;
 
+    if(id == MAPOBJECTID_BILGERAT) // Bilge rat
+    {
+        mapObject->attackBase = 1;
+        mapObject->attackToHitBase = 1;
+        mapObject->defenseBase = 1;
+        mapObject->description = "A bilge rat.";
+        mapObject->layer = 1;
+        mapObject->name = "bilge rat";
+        mapObject->flags |= (MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_ISHOSTILE | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLACEINROOM);
+        mapObject->hp = 3;
+        mapObject->hpMax = 3;
+        mapObject->o2 = 5;
+        mapObject->o2Max = 5;
+        mapObject->turnTicks = 5;
+        mapObject->turnTicksSize = 5;
+        mapObject->wchr = L'r';
+        mapObject->wchrAlt = L'r';
+        hasView = true;
+    }
+
     if(id == MAPOBJECTID_PLAYER) // Player
     {
         mapObject->attackBase = 1;
@@ -261,12 +301,26 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->attack = 3;
         mapObject->attackToHit = 1;
         mapObject->description = "A dive knife.";
+        mapObject->details = "[ATT: 3 +1]";
         mapObject->equipAt = MAPOBJECTEQUIPAT_WEAPON;
         mapObject->layer = 2;
         mapObject->name = "dive knife";
         mapObject->flags |= (MAPOBJECTFLAG_ISEQUIPMENT | MAPOBJECTFLAG_ISITEM);
         mapObject->wchr = L'/';
         mapObject->wchrAlt = L'/';
+    }
+
+    if(id == MAPOBJECTID_LIFEVEST) // Lifevest
+    {
+        mapObject->defense = 2;
+        mapObject->description = "A lifevest.";
+        mapObject->details = "[DEF: 2]";
+        mapObject->equipAt = MAPOBJECTEQUIPAT_BODY;
+        mapObject->layer = 2;
+        mapObject->name = "lifevest";
+        mapObject->flags |= (MAPOBJECTFLAG_ISEQUIPMENT | MAPOBJECTFLAG_ISITEM);
+        mapObject->wchr = L'(';
+        mapObject->wchrAlt = L'(';
     }
 
     if(id == MAPOBJECTID_WATER) // Water
@@ -532,17 +586,32 @@ void Map_Generate(Map *map)
 
     Map_PlaceObject(map, Map_CreateObject(map, MAPOBJECTID_STAIRS));
 
+    int monsterIDs[10];
+    monsterIDs[0] = MAPOBJECTID_BILGERAT;
+    monsterIDs[1] = MAPOBJECTID_BILGERAT;
+    monsterIDs[2] = MAPOBJECTID_BILGERAT;
+    monsterIDs[3] = MAPOBJECTID_BILGERAT;
+    monsterIDs[4] = MAPOBJECTID_BILGERAT;
+    monsterIDs[5] = MAPOBJECTID_BILGERAT;
+    monsterIDs[6] = MAPOBJECTID_BILGERAT;
+    monsterIDs[7] = MAPOBJECTID_BILGERAT;
+    monsterIDs[8] = MAPOBJECTID_BILGERAT;
+    monsterIDs[9] = MAPOBJECTID_BILGERAT;
+
+    for(int i = 0; i < 3 + rand() % 2; i++)
+        Map_PlaceObject(map, Map_CreateObject(map, monsterIDs[rand() % 10]));
+
     int itemIDs[10];
     itemIDs[0] = MAPOBJECTID_DIVEKNIFE;
     itemIDs[1] = MAPOBJECTID_DIVEKNIFE;
     itemIDs[2] = MAPOBJECTID_DIVEKNIFE;
     itemIDs[3] = MAPOBJECTID_DIVEKNIFE;
     itemIDs[4] = MAPOBJECTID_DIVEKNIFE;
-    itemIDs[5] = MAPOBJECTID_DIVEKNIFE;
-    itemIDs[6] = MAPOBJECTID_DIVEKNIFE;
-    itemIDs[7] = MAPOBJECTID_DIVEKNIFE;
-    itemIDs[8] = MAPOBJECTID_DIVEKNIFE;
-    itemIDs[9] = MAPOBJECTID_DIVEKNIFE;
+    itemIDs[5] = MAPOBJECTID_LIFEVEST;
+    itemIDs[6] = MAPOBJECTID_LIFEVEST;
+    itemIDs[7] = MAPOBJECTID_LIFEVEST;
+    itemIDs[8] = MAPOBJECTID_LIFEVEST;
+    itemIDs[9] = MAPOBJECTID_LIFEVEST;
 
     for(int i = 0; i < 3 + rand() % 2; i++)
         Map_PlaceObject(map, Map_CreateObject(map, itemIDs[rand() % 10]));
@@ -663,6 +732,20 @@ int Map_GetRoomIndexContaining(Map *map, Point2D point)
     }
 
     return -1;
+}
+
+int Map_GetSimpleDistance(Map *map, Point2D from, Point2D to)
+{
+    int distance = 0;
+    while(from.x != to.x || from.y != to.y)
+    {
+        if(to.x > from.x) from.x++;
+        if(to.x < from.x) from.x--;
+        if(to.y > from.y) from.y++;
+        if(to.y < from.y) from.y--;
+    }
+
+    return distance;
 }
 
 MapTile *Map_GetTile(Map *map, Point2D point)
@@ -929,12 +1012,14 @@ MapObject *MapObject_Create(const char *name)
 
     mapObject->attack = 0;
     mapObject->attackBase = 0;
+    mapObject->attackDistance = 0;
     mapObject->attackToHit = 0;
     mapObject->attackToHitBase = 0;
     mapObject->colorPair = CONSOLECOLORPAIR_WHITEBLACK;
     mapObject->defense = 0;
     mapObject->defenseBase = 0;
     mapObject->description = "Nothing.";
+    mapObject->details = "";
     mapObject->equipAt = -1;
     mapObject->hp = 0;
     mapObject->hpMax = 0;
@@ -993,6 +1078,10 @@ MapObjectAsItem *MapObject_ToItem(MapObject *mapObject)
     memset(item->description, 0, (strlen(mapObject->description) + 1));
     strcpy(item->description, mapObject->description);
 
+    item->details = malloc(sizeof(char) * (strlen(mapObject->details) + 1));
+    memset(item->details, 0, (strlen(mapObject->details) + 1));
+    strcpy(item->details, mapObject->details);
+
     item->equipAt = mapObject->equipAt;
     item->flags = mapObject->flags;
     item->id = mapObject->id;
@@ -1033,6 +1122,7 @@ MapObjectAction *MapObjectAction_Create(int type)
     action->object = NULL;
     action->result = false;
     action->resultMessage = "";
+    action->resultValueInt = 0;
     action->target = NULL;
     action->targetItem = NULL;
     action->to = (Point2D){ -1, -1 };
@@ -1050,6 +1140,7 @@ void MapObjectAsItem_Destroy(MapObjectAsItem *item)
 {
     free(item->name);
     free(item->description);
+    free(item->details);
     free(item);
 }
 
