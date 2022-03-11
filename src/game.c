@@ -400,21 +400,21 @@ void Game_HandleInput(Game *game)
                 Console_Clear(game->console);
             }
 
-            /*
-            // '*' == DEBUG: GENERATE NEW FLOOR
+            #if RELEASE == 0
+                // '*' == DEBUG: GENERATE NEW FLOOR
 
-            if(game->key == '*')
-            {
-                game->map->level++;
-                MapTile_RemoveObject(Map_GetTile(game->map, game->map->player->position), game->map->player);
-                Map_Clear(game->map);
-                Map_Generate(game->map);
+                if(game->key == '*')
+                {
+                    game->map->level++;
+                    MapTile_RemoveObject(Map_GetTile(game->map, game->map->player->position), game->map->player);
+                    Map_Clear(game->map);
+                    Map_Generate(game->map);
 
-                Map_ResetObjectView(game->map, game->map->player);
-                Map_PlaceObject(game->map, game->map->player);
-                Console_Clear(game->console);
-            }
-            */
+                    Map_ResetObjectView(game->map, game->map->player);
+                    Map_PlaceObject(game->map, game->map->player);
+                    Console_Clear(game->console);
+                }
+            #endif
 
             // Movement
 
@@ -770,8 +770,10 @@ void Game_MapObjectTakesTurn(Game *game, Map *map, MapObject *mapObject)
 
 void Game_RenderUI(Game *game)
 {
-    Console_WriteF(game->console, 0, 0, CONSOLECOLORPAIR_BLACKWHITE, 0, "KEY = %d   ", game->key);
-
+    #if RELEASE == 0
+        Console_WriteF(game->console, 0, 0, CONSOLECOLORPAIR_BLACKWHITE, 0, "KEY = %d   ", game->key);
+    #endif
+    
     int max = 5;
     if(game->logSize < 5) max = game->logSize;
 

@@ -129,8 +129,6 @@ typedef struct Map
     size_t levelFloodTimerSize;
     MapObject *player;
     Point2D renderOffset;
-    Point2D roomDoorways[10];
-    size_t roomDoorwaysCount;
     Rect2D *rooms[25];
     size_t roomsCount;
     Size2D size;
@@ -150,6 +148,7 @@ int Map_GetPointColorPair(Map *map, Point2D point);
 char *Map_GetPointDescription(Map *map, Point2D point);
 wchar_t Map_GetPointWChr(Map *map, Point2D point);
 int Map_GetRoomIndexContaining(Map *map, Point2D point);
+int Map_GetRoomIndexContainingBorder(Map *map, Point2D point, int border);
 int Map_GetSimpleDistance(Map *map, Point2D from, Point2D to);
 MapTile *Map_GetTile(Map *map, Point2D point);
 void Map_MoveObject(Map *map, MapObject *mapObject, Point2D to);

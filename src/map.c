@@ -445,8 +445,9 @@ void Map_DestroyObject(Map* map, MapObject *mapObject)
 
 void Map_Generate(Map *map)
 {
-    map->levelFloodTimerSize = (120 + rand() % 10) - (map->level * 5);
-    if(map->levelFloodTimerSize < 50) map->levelFloodTimerSize = 50;
+    int fts = (120 + rand() % 10) - (map->level * 2);
+    if(fts < 10) fts = 10;
+    map->levelFloodTimerSize = (size_t)fts;
     map->levelFloodTimer = (int)map->levelFloodTimerSize;
 
     while(true)
@@ -600,34 +601,6 @@ void Map_Generate(Map *map)
         }
 
         if(toBreak) break;
-    }
-
-    map->roomDoorwaysCount = 0;
-
-    for(int i = 0; i < map->roomsCount; i++)
-    {
-        Rect2D *room = map->rooms[i];
-
-        for(int y = -1; y <= (int)room->size.height; y++)
-        {
-            for(int x = -1; x <= (int)room->size.width; x++)
-            {
-                Point2D point = (Point2D){ room->position.x + x, room->position.y + y };
-
-                if(point.x < 1 || point.y < 1 || point.x >= map->size.width - 1 || point.y >= map->size.height - 1) 
-                    continue;
-
-                if(Map_GetTile(map, point)->type != MAPTILETYPE_FLOOR) 
-                    continue;
-
-                if(!((Map_GetTile(map, (Point2D){ point.x - 1, point.y })->type == MAPTILETYPE_WALL && Map_GetTile(map, (Point2D){ point.x + 1, point.y })->type == MAPTILETYPE_WALL) || (Map_GetTile(map, (Point2D){ point.x, point.y - 1 })->type == MAPTILETYPE_WALL && Map_GetTile(map, (Point2D){ point.x, point.y + 1 })->type == MAPTILETYPE_WALL)))
-                    continue;
-
-                map->roomDoorways[map->roomDoorwaysCount].x = point.x;
-                map->roomDoorways[map->roomDoorwaysCount].y = point.y;
-                map->roomDoorwaysCount++;
-            }
-        }
     }
 
     if(map->player == NULL)
@@ -789,6 +762,18 @@ int Map_GetRoomIndexContaining(Map *map, Point2D point)
     return -1;
 }
 
+int Map_GetRoomIndexContainingBorder(Map *map, Point2D point, int border)
+{
+    for(int i = 0; i < map->roomsCount; i++)
+    {
+        if(point.x < map->rooms[i]->position.x - border || point.y < map->rooms[i]->position.y - border || point.x >= map->rooms[i]->position.x + map->rooms[i]->size.width + border || point.y >= map->rooms[i]->position.y + map->rooms[i]->size.height + border)
+            continue;
+        return i;
+    }
+
+    return -1;
+}
+
 int Map_GetSimpleDistance(Map *map, Point2D from, Point2D to)
 {
     int distance = 0;
@@ -864,14 +849,13 @@ void Map_PlaceObject(Map *map, MapObject *mapObject)
 
         if(mapObject->flags & MAPOBJECTFLAG_PLACEINDOORWAYS)
         {
-            if(map->roomDoorwaysCount == 0) return;
-
-            Point2D roomDoorway = map->roomDoorways[rand() % map->roomDoorwaysCount];
-            point = (Point2D){ roomDoorway.x, roomDoorway.y };
+            point = (Point2D){ 1 + rand() % (map->size.width - 2), 1 + rand() % (map->size.height - 2) };
+            if(Map_GetRoomIndexContainingBorder(map, point, 1) == -1) continue;
             tile = Map_GetTile(map, point);
-            if(tile == NULL) continue;
 
             if(!(tile->passable & MAPTILEPASSABLE_SOLID)) continue;
+            if(!((Map_GetTile(map, (Point2D){ point.x - 1, point.y })->type == MAPTILETYPE_WALL && Map_GetTile(map, (Point2D){ point.x + 1, point.y })->type == MAPTILETYPE_WALL) || (Map_GetTile(map, (Point2D){ point.x, point.y - 1 })->type == MAPTILETYPE_WALL && Map_GetTile(map, (Point2D){ point.x, point.y + 1 })->type == MAPTILETYPE_WALL)))
+                continue;
         }
         else
         {
