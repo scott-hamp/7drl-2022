@@ -23,6 +23,7 @@ void Console_ClearRow(Console *console, int y)
 Console *Console_Create()
 {
     setlocale(LC_ALL, "");      // Set the locale to that of the user.
+    fwide(stdout, 1);           // Indicate that wide characters will be printed.
 
     Console *console = malloc(sizeof(Console));
     console->window = initscr();
