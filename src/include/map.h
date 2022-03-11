@@ -11,8 +11,11 @@
 #define MAPOBJECTACTIONTYPE_PICKUP          5
 #define MAPOBJECTACTIONTYPE_USESTAIRS       6
 
-#define MAPOBJECTEQUIPAT_BODY       0
-#define MAPOBJECTEQUIPAT_WEAPON     1
+#define MAPOBJECTEQUIPAT_SLOTSCOUNT     4
+#define MAPOBJECTEQUIPAT_BACK           0
+#define MAPOBJECTEQUIPAT_BODY           1
+#define MAPOBJECTEQUIPAT_FACE           2
+#define MAPOBJECTEQUIPAT_WEAPON         3
 
 #define MAPOBJECTFLAG_BLOCKSGAS             1 << 0
 #define MAPOBJECTFLAG_BLOCKSLIGHT           1 << 1
@@ -30,21 +33,25 @@
 #define MAPOBJECTFLAG_ISLIQUIDSOURCE        1 << 14
 #define MAPOBJECTFLAG_ISLIVING              1 << 15
 #define MAPOBJECTFLAG_ISOPEN                1 << 16
-#define MAPOBJECTFLAG_PLACEINDOORWAYS       1 << 17
-#define MAPOBJECTFLAG_PLACEINROOM           1 << 18
-#define MAPOBJECTFLAG_PLACEINWATER          1 << 19
-#define MAPOBJECTFLAG_PLAYER                1 << 20
-#define MAPOBJECTFLAG_STAIRS                1 << 21
+#define MAPOBJECTFLAG_ITEMINCREASE02        1 << 17
+#define MAPOBJECTFLAG_ITEMSUPPLY02          1 << 18
+#define MAPOBJECTFLAG_PLACEINDOORWAYS       1 << 19
+#define MAPOBJECTFLAG_PLACEINROOM           1 << 20
+#define MAPOBJECTFLAG_PLACEINWATER          1 << 21
+#define MAPOBJECTFLAG_PLAYER                1 << 22
+#define MAPOBJECTFLAG_STAIRS                1 << 23
 
 #define MAPOBJECTID_PLAYER          0
 #define MAPOBJECTID_BILGERAT        1
 #define MAPOBJECTID_DIVEKNIFE       2
 #define MAPOBJECTID_DOOR            3
 #define MAPOBJECTID_LIFEVEST        4
-#define MAPOBJECTID_STAIRS          5
-#define MAPOBJECTID_TIGERFISH       6
-#define MAPOBJECTID_WATER           7
-#define MAPOBJECTID_WATERSOURCE     8
+#define MAPOBJECTID_SCUBAMASK       5
+#define MAPOBJECTID_SCUBATANK       6
+#define MAPOBJECTID_STAIRS          7
+#define MAPOBJECTID_TIGERFISH       8
+#define MAPOBJECTID_WATER           9
+#define MAPOBJECTID_WATERSOURCE     10
 
 #define MAPOBJECTVIEW_UNSEEN        0
 #define MAPOBJECTVIEW_SEEN          1
@@ -69,6 +76,8 @@ typedef struct MapObjectAsItem
     uint32_t flags;
     int id;
     char *name;
+    int hp, hpMax;
+    int o2, o2Max;
     wchar_t wchr, wchrAlt;
 } MapObjectAsItem;
 
@@ -82,11 +91,12 @@ typedef struct MapObject
     char *description;
     char *details;
     int equipAt;
-    MapObjectAsItem *equipment[2];
+    MapObjectAsItem *equipment[MAPOBJECTEQUIPAT_SLOTSCOUNT];
     uint32_t flags;
     int height;
     int hp, o2;
     size_t hpMax, o2Max;
+    int hpMaxBase, o2MaxBase;
     int hpRecoverTimer, hpRecoverTimerLength;
     int id;
     int layer;
@@ -166,6 +176,7 @@ int MapObject_GetEquippedAt(MapObject *mapObject, MapObjectAsItem *item);
 void MapObject_RemoveItemFromItems(MapObject *mapObject, MapObjectAsItem *item);
 MapObjectAsItem *MapObject_ToItem(MapObject *mapObject);
 void MapObject_UpdateAttributes(MapObject *mapObject);
+void MapObject_UpdateItems(MapObject *mapObject);
 MapObjectAction *MapObjectAction_Create(int type);
 void MapObjectAction_Destroy(MapObjectAction *action);
 void MapObjectAsItem_Destroy(MapObjectAsItem *item);

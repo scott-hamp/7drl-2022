@@ -56,6 +56,8 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
                 if(tile->objectsCount == 10) continue;
 
                 MapObject *mapObject = Map_CreateObject(map, action->targetItem->id);
+                mapObject->o2 = action->targetItem->o2;
+                mapObject->o2Max = action->targetItem->o2Max;
                 MapTile_AddObject(tile, mapObject);
                 MapObject_RemoveItemFromItems(action->object, action->targetItem);
                 MapObjectAsItem_Destroy(action->targetItem);
@@ -162,6 +164,8 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
 
     if(action->type == MAPOBJECTACTIONTYPE_PICKUP)
     {
+        if(!(action->object->flags & MAPOBJECTFLAG_HASINVENTORY)) return action;
+
         MapTile *tile = Map_GetTile(map, action->object->position);
         if(tile->objectsCount == 0) return action;
 
@@ -285,9 +289,9 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->name = "bilge rat";
         mapObject->flags |= (MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_CANATTACK | MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_ISHOSTILE | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLACEINROOM);
         mapObject->hp = 3;
-        mapObject->hpMax = 3;
+        mapObject->hpMaxBase = 3;
         mapObject->o2 = 5;
-        mapObject->o2Max = 5;
+        mapObject->o2MaxBase = 5;
         mapObject->turnTicks = 8;
         mapObject->turnTicksSize = 8;
         mapObject->wchr = L'r';
@@ -295,7 +299,7 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         hasView = true;
     }
 
-    if(id == MAPOBJECTID_PLAYER) // Player
+    if(id == MAPOBJECTID_PLAYER) // PLAYER
     {
         mapObject->attackBase = 1;
         mapObject->attackToHitBase = 1;
@@ -307,11 +311,11 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->hpRecoverTimerLength = 25;
         mapObject->layer = 0;
         mapObject->name = "Player";
-        mapObject->flags |= (MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_CANATTACK | MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLACEINROOM | MAPOBJECTFLAG_PLAYER);
+        mapObject->flags |= (MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_CANATTACK | MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_HASINVENTORY | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLACEINROOM | MAPOBJECTFLAG_PLAYER);
         mapObject->hp = 10;
-        mapObject->hpMax = 10;
+        mapObject->hpMaxBase = 10;
         mapObject->o2 = 30;
-        mapObject->o2Max = 30;
+        mapObject->o2MaxBase = 30;
         mapObject->turnTicks = 10;
         mapObject->turnTicksSize = 10;
         mapObject->wchr = L'@';
@@ -338,7 +342,7 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->equipAt = MAPOBJECTEQUIPAT_WEAPON;
         mapObject->layer = 2;
         mapObject->name = "dive knife";
-        mapObject->flags |= (MAPOBJECTFLAG_ISEQUIPMENT | MAPOBJECTFLAG_ISITEM);
+        mapObject->flags |= (MAPOBJECTFLAG_ISEQUIPMENT | MAPOBJECTFLAG_ISITEM | MAPOBJECTFLAG_PLACEINROOM);
         mapObject->wchr = L'/';
         mapObject->wchrAlt = L'/';
     }
@@ -351,9 +355,37 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->equipAt = MAPOBJECTEQUIPAT_BODY;
         mapObject->layer = 2;
         mapObject->name = "lifevest";
-        mapObject->flags |= (MAPOBJECTFLAG_ISEQUIPMENT | MAPOBJECTFLAG_ISITEM);
+        mapObject->flags |= (MAPOBJECTFLAG_ISEQUIPMENT | MAPOBJECTFLAG_ISITEM | MAPOBJECTFLAG_PLACEINROOM);
         mapObject->wchr = L'(';
         mapObject->wchrAlt = L'(';
+    }
+
+    if(id == MAPOBJECTID_SCUBAMASK) // Scuba mask
+    {
+        mapObject->defense = 1;
+        mapObject->description = "A scuba mask.";
+        mapObject->details = "[DEF: 1, O2: +10]";
+        mapObject->equipAt = MAPOBJECTEQUIPAT_FACE;
+        mapObject->layer = 2;
+        mapObject->name = "scuba mask";
+        mapObject->o2 = 10;
+        mapObject->flags |= (MAPOBJECTFLAG_ISEQUIPMENT | MAPOBJECTFLAG_ISITEM | MAPOBJECTFLAG_ITEMINCREASE02 | MAPOBJECTFLAG_PLACEINROOM);
+        mapObject->wchr = L'(';
+        mapObject->wchrAlt = L'(';
+    }
+
+    if(id == MAPOBJECTID_SCUBATANK) // Scuba tank
+    {
+        mapObject->defense = 1;
+        mapObject->description = "A scuba tank.";
+        mapObject->details = "[DEF: 1, O2: +%d / 100]";
+        mapObject->equipAt = MAPOBJECTEQUIPAT_BACK;
+        mapObject->layer = 2;
+        mapObject->name = "scuba tank";
+        mapObject->o2 = 500;
+        mapObject->flags |= (MAPOBJECTFLAG_ISEQUIPMENT | MAPOBJECTFLAG_ISITEM | MAPOBJECTFLAG_ITEMINCREASE02 | MAPOBJECTFLAG_ITEMSUPPLY02 | MAPOBJECTFLAG_PLACEINROOM);
+        mapObject->wchr = L'[';
+        mapObject->wchrAlt = L'[';
     }
 
     if(id == MAPOBJECTID_TIGERFISH) // Tigerfish
@@ -370,7 +402,7 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->name = "tigerfish";
         mapObject->flags |= (MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_CANATTACK | MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_ISAQUATIC | MAPOBJECTFLAG_ISHOSTILE | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLACEINWATER);
         mapObject->hp = 5;
-        mapObject->hpMax = 5;
+        mapObject->hpMaxBase = 5;
         mapObject->turnTicks = 12;
         mapObject->turnTicksSize = 12;
         mapObject->wchr = L'f';
@@ -633,13 +665,13 @@ void Map_Generate(Map *map)
     itemIDs[0] = MAPOBJECTID_DIVEKNIFE;
     itemIDs[1] = MAPOBJECTID_DIVEKNIFE;
     itemIDs[2] = MAPOBJECTID_DIVEKNIFE;
-    itemIDs[3] = MAPOBJECTID_DIVEKNIFE;
-    itemIDs[4] = MAPOBJECTID_DIVEKNIFE;
+    itemIDs[3] = MAPOBJECTID_LIFEVEST;
+    itemIDs[4] = MAPOBJECTID_LIFEVEST;
     itemIDs[5] = MAPOBJECTID_LIFEVEST;
-    itemIDs[6] = MAPOBJECTID_LIFEVEST;
-    itemIDs[7] = MAPOBJECTID_LIFEVEST;
-    itemIDs[8] = MAPOBJECTID_LIFEVEST;
-    itemIDs[9] = MAPOBJECTID_LIFEVEST;
+    itemIDs[6] = MAPOBJECTID_SCUBAMASK;
+    itemIDs[7] = MAPOBJECTID_SCUBAMASK;
+    itemIDs[8] = MAPOBJECTID_SCUBAMASK;
+    itemIDs[9] = MAPOBJECTID_SCUBATANK;
 
     for(int i = 0; i < 3 + rand() % 2; i++)
         Map_PlaceObject(map, Map_CreateObject(map, itemIDs[rand() % 10]));
@@ -1085,12 +1117,14 @@ MapObject *MapObject_Create(const char *name)
     mapObject->equipAt = -1;
     mapObject->hp = 0;
     mapObject->hpMax = 0;
+    mapObject->hpMaxBase = 0;
     mapObject->hpRecoverTimer = 0;
     mapObject->hpRecoverTimerLength = 0;
     mapObject->lastRoomIndex = -1;
     mapObject->name = name;
     mapObject->o2 = 0;
     mapObject->o2Max = 0;
+    mapObject->o2MaxBase = 0;
     for(int i = 0; i < 2; i++)
         mapObject->equipment[i] = NULL;
     mapObject->flags = 0;
@@ -1104,7 +1138,7 @@ MapObject *MapObject_Create(const char *name)
 
 int MapObject_GetEquippedAt(MapObject *mapObject, MapObjectAsItem *item)
 {
-    for(int i = 0; i < 2; i++)
+    for(int i = 0; i < MAPOBJECTEQUIPAT_SLOTSCOUNT; i++)
     {
         if(mapObject->equipment[i] != item) continue;
 
@@ -1148,11 +1182,16 @@ MapObjectAsItem *MapObject_ToItem(MapObject *mapObject)
 
     item->equipAt = mapObject->equipAt;
     item->flags = mapObject->flags;
+    item->hp = mapObject->hp;
+    item->hpMax = mapObject->hpMax;
     item->id = mapObject->id;
 
     item->name = malloc(sizeof(char) * (strlen(mapObject->name) + 1));
     memset(item->name, 0, (strlen(mapObject->name) + 1));
     strcpy(item->name, mapObject->name);
+
+    item->o2 = mapObject->o2;
+    item->o2Max = mapObject->o2Max;
 
     item->wchr = mapObject->wchr;
     item->wchrAlt = mapObject->wchrAlt;
@@ -1167,6 +1206,8 @@ void MapObject_UpdateAttributes(MapObject *mapObject)
     mapObject->attack = mapObject->attackBase;
     mapObject->attackToHit = mapObject->attackToHitBase;
     mapObject->defense = mapObject->defenseBase;
+    mapObject->hpMax = mapObject->hpMaxBase;
+    mapObject->o2Max = mapObject->o2MaxBase;
 
     for(int i = 0; i < mapObject->itemsCount; i++)
     {
@@ -1176,6 +1217,25 @@ void MapObject_UpdateAttributes(MapObject *mapObject)
         mapObject->attack += mapObject->items[i]->attack;
         mapObject->attackToHit += mapObject->items[i]->attackToHit;
         mapObject->defense += mapObject->items[i]->defense;
+        mapObject->hpMax += mapObject->items[i]->hp;
+        mapObject->o2Max += mapObject->items[i]->o2;
+    }
+
+    if(mapObject->hp > mapObject->hpMax) mapObject->hp = mapObject->hpMax;
+    if(mapObject->o2 > mapObject->o2Max) mapObject->o2 = mapObject->o2Max;
+}
+
+void MapObject_UpdateItems(MapObject *mapObject)
+{
+    if(!(mapObject->flags & MAPOBJECTFLAG_HASINVENTORY)) return;
+
+    for(int i = 0; i < mapObject->itemsCount; i++)
+    {
+        MapObjectAsItem *item = mapObject->items[i];
+        if(item->flags & MAPOBJECTFLAG_ITEMSUPPLY02 && MapObject_GetEquippedAt(mapObject, item) != -1)
+        {
+            if(item->o2 > 0) item->o2--;
+        }
     }
 }
 

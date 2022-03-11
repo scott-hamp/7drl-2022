@@ -630,6 +630,7 @@ void Game_MapObjectTakesTurn(Game *game, Map *map, MapObject *mapObject)
         }
 
         MapObject_UpdateAttributes(mapObject);
+        MapObject_UpdateItems(mapObject);
 
         if(!(mapObject->flags & MAPOBJECTFLAG_ISAQUATIC))
         {
@@ -797,7 +798,7 @@ void Game_RenderUI(Game *game)
     {
         Rect2D rect;
         rect.position = (Point2D){ 0, 0 };
-        rect.size = (Size2D){ 50, 15 };
+        rect.size = (Size2D){ 70, 15 };
         wchar_t wchrs[6] = { L'═', L'║', L'╔', L'╗', L'╝', L'╚' };
         Console_DrawRect(game->console, rect, wchrs, CONSOLECOLORPAIR_WHITEBLACK, 0);
 
@@ -811,17 +812,28 @@ void Game_RenderUI(Game *game)
             int colorPair = CONSOLECOLORPAIR_WHITEBLACK;
             if(i < game->map->player->itemsCount)
             {
-                str = game->map->player->items[i]->description;
-                strDetails = game->map->player->items[i]->details;
+                MapObjectAsItem *item = game->map->player->items[i];
+                str = item->description;
+                strDetails = item->details;
                 
-                int equippedAt = MapObject_GetEquippedAt(game->map->player, game->map->player->items[i]);
+                int equippedAt = MapObject_GetEquippedAt(game->map->player, item);
                 if(equippedAt > -1)
                 {
-                    strExtra = (equippedAt == MAPOBJECTEQUIPAT_BODY) ? "(wearing)" : "(ready)";
+                    strExtra = (equippedAt == MAPOBJECTEQUIPAT_WEAPON) ? "(ready)" : "(wearing)";
                     colorPair = CONSOLECOLORPAIR_YELLOWBLACK;
                 }
+
+                Console_WriteF(game->console, 3 + i, 3, colorPair, 0, "%c. %s", 'a' + i, str);
+                int x = 20;
+                if(item->flags & MAPOBJECTFLAG_ITEMSUPPLY02)
+                    Console_WriteF(game->console, 3 + i, 3 + x, colorPair, 0, strDetails, item->o2);
+                else
+                    Console_Write(game->console, 3 + i, 3 + x, strDetails, colorPair, 0);
+                x += 30;
+                Console_Write(game->console, 3 + i, 3 + x, strExtra, colorPair, 0);
             }
-            Console_WriteF(game->console, 3 + i, 3, colorPair, 0, "%c. %s %s %s", 'a' + i, str, strDetails, strExtra);
+            else
+                Console_WriteF(game->console, 3 + i, 3, colorPair, 0, "%c. ...", 'a' + i);
         }
     }
 }
