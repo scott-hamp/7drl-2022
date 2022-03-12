@@ -4,9 +4,10 @@
 #include "map.h"
 
 #define COMMAND_DROP          0
-#define COMMAND_LOOK          1
-#define COMMAND_OPENCLOSE     2
-#define COMMAND_WEARWIELD     3
+#define COMMAND_FIRE          1
+#define COMMAND_LOOK          2
+#define COMMAND_OPENCLOSE     3
+#define COMMAND_WEARWIELD     4
 
 #define SCREEN_HELP     0
 #define SCREEN_MAIN     1

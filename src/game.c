@@ -15,8 +15,32 @@ Game *Game_Create(Console *console)
 
     Console_SetCursor(game->console, 1);
     Console_Clear(game->console);
-    Console_Write(game->console, 0, 0, "~ 7DRL 2022 ~", 0, 0);
-    Console_Write(game->console, 1, 0, "Press any key to start...", 0, 0);
+
+    Console_Write(game->console, 0, 0, ".-,--'                .  .         .-,--.          .  .       ", CONSOLECOLORPAIR_CYANBLACK, 0);
+    Console_Write(game->console, 1, 0, " \\|__ ,-. ,-. ,-,-.   |- |-. ,-.   ' |   \\ ,-. ,-. |- |-. ,-. ", CONSOLECOLORPAIR_CYANBLACK, 0);
+    Console_Write(game->console, 2, 0, "  |   |   | | | | |   |  | | |-'   , |   / |-' | | |  | | `-. ", CONSOLECOLORPAIR_CYANBLACK, 0);
+    Console_Write(game->console, 3, 0, " `'   '   `-' ' ' '   `' ' ' `-'   `-^--'  `-' |-' `' ' ' `-' ", CONSOLECOLORPAIR_CYANBLACK, 0);
+    Console_Write(game->console, 4, 0, "                                               |              ", CONSOLECOLORPAIR_CYANBLACK, 0);
+    Console_Write(game->console, 5, 0, "                                               '", CONSOLECOLORPAIR_CYANBLACK, 0);
+
+    Console_Write(game->console, 6, 0, "This game is a traditional roguelike created by Begebies for the ", 0, 0);
+    Console_Write(game->console, 7, 0, "  2022 Seven-Day Roguelike. You're stuck on a sinking ship, and ", 0, 0);
+    Console_Write(game->console, 8, 0, "  must quickly ascend to the next floor before water floods the ", 0, 0);
+    Console_Write(game->console, 9, 0, "  area, while making sure to grab items to help you survive.", 0, 0);
+
+    Console_Write(game->console, 11, 0, "                            Controls: ", 0, 0);
+    Console_Write(game->console, 12, 0, " - Movement:                   vi keys / numpad keys / arrow keys", 0, 0);
+    Console_Write(game->console, 13, 0, " - Drop:                       d", 0, 0);
+    Console_Write(game->console, 14, 0, " - Fire:                       f", 0, 0);
+    Console_Write(game->console, 15, 0, " - Look:                       x", 0, 0);
+    Console_Write(game->console, 16, 0, " - Open / close:               o", 0, 0);
+    Console_Write(game->console, 17, 0, " - Pick up:                    g / ,", 0, 0);
+    Console_Write(game->console, 18, 0, " - View help:                  ?", 0, 0);
+    Console_Write(game->console, 19, 0, " - View inventory:             i", 0, 0);
+    Console_Write(game->console, 20, 0, " - Wield / wear / put away:    w", 0, 0);
+
+    Console_Write(game->console, 23, 0, "                    PRESS ANY KEY TO START!", CONSOLECOLORPAIR_YELLOWBLACK, 0);
+
     Console_Refresh(game->console);
 
     return game;
@@ -84,6 +108,26 @@ void Game_HandleInput(Game *game)
         return;
     }
 
+    if(game->screen == SCREEN_HELP)
+    {
+        // Esc.
+        if(game->key == 27)
+        {
+            game->screen = SCREEN_MAIN;
+
+            Console_Clear(game->console);
+            Map_Render(game->map, game->map->player, game->console);
+            Game_RenderUI(game);
+
+            Console_SetCursor(game->console, 1);
+            Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->map->player->position.x, game->map->renderOffset.y + game->map->player->position.y });
+            Console_Refresh(game->console);
+            return;
+        }
+
+        return;
+    }
+
     if(game->screen == SCREEN_MAIN)
     {
         if(!(game->map->player->flags & MAPOBJECTFLAG_ISLIVING))
@@ -96,7 +140,7 @@ void Game_HandleInput(Game *game)
 
         if(game->commandActive > -1)
         {
-            if(game->key == 27) // Esc.
+            if(game->key == 27 || ((game->commandActive == COMMAND_DROP || game->commandActive == COMMAND_WEARWIELD ) && game->key == 105)) // Esc.
             {
                 game->commandActive = -1;
 
@@ -149,6 +193,74 @@ void Game_HandleInput(Game *game)
                 Console_Clear(game->console);
                 Console_SetCursor(game->console, 1);
                 Game_MapNextTurn(game, game->map);
+            }
+
+            // Command: Fire
+
+            if(game->commandActive == COMMAND_FIRE)
+            {
+                if(direction.x == 0 && direction.y == 0)
+                {
+                    // Enter
+                    if(game->key == 10)
+                    {
+                        if(game->commandPoint.x == game->map->player->position.x && game->commandPoint.y == game->map->player->position.y)
+                        {
+                            Game_Log(game, "You can't shoot yourself!", CONSOLECOLORPAIR_WHITEBLACK, 0);
+                            Game_RenderUI(game);
+                            Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->commandPoint.x, game->map->renderOffset.y + game->commandPoint.y });
+                            Console_Refresh(game->console);
+                            return;
+                        }
+
+                        MapTile *tile = Map_GetTile(game->map, game->commandPoint);
+                        MapObject *target = MapTile_GetObjectWithFlags(tile, MAPOBJECTFLAG_ISHOSTILE);
+                        
+                        if(target == NULL)
+                        {
+                            Game_Log(game, "There's nothing to fire at there.", CONSOLECOLORPAIR_WHITEBLACK, 0);
+                            Game_RenderUI(game);
+                            Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->commandPoint.x, game->map->renderOffset.y + game->commandPoint.y });
+                            Console_Refresh(game->console);
+                            return;
+                        }
+
+                        MapObjectAction *action = MapObjectAction_Create(MAPOBJECTACTIONTYPE_ATTACK);
+                        action->object = game->map->player;
+                        action->objectItem = game->map->player->equipment[MAPOBJECTEQUIPAT_WEAPON];
+                        action->target = target;
+
+                        action = Map_AttemptObjectAction(game->map, action);
+
+                        if(action->result)
+                        {
+                            if(action->target == NULL)
+                                Game_Log(game, "You kill it!", CONSOLECOLORPAIR_WHITEBLACK, 0);
+                            else
+                                Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "You shoot the %s!", action->target->name);
+                        }
+                        else
+                            Game_LogF(game, CONSOLECOLORPAIR_WHITEBLACK, 0, "You try to shoot the %s, but miss!", action->target->name);
+                        
+                        game->commandActive = -1;
+                        Game_MapNextTurn(game, game->map);
+                    }
+                    else
+                        return;
+                }
+                else
+                {
+                    Point2D to = (Point2D){ game->commandPoint.x + direction.x, game->commandPoint.y + direction.y };
+
+                    int view = Map_GetObjectView(game->map, game->map->player, to);
+                    if(view != MAPOBJECTVIEW_VISIBLE) return;
+
+                    game->commandPoint = to;
+                    Game_RenderUI(game);
+                    Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->commandPoint.x, game->map->renderOffset.y + game->commandPoint.y });
+                    Console_Refresh(game->console);
+                    return;
+                }
             }
 
             // Command: Look
@@ -312,6 +424,60 @@ void Game_HandleInput(Game *game)
                 return;
             }
 
+            // 'f' == Fire
+
+            if(game->key == 102)
+            {
+                MapObjectAsItem *weapon = game->map->player->equipment[MAPOBJECTEQUIPAT_WEAPON];
+                
+                if(weapon == NULL)
+                {
+                    Game_Log(game, "You need to wield a ranged weapon.", CONSOLECOLORPAIR_WHITEBLACK, 0);
+                    Game_RenderUI(game);
+                    Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->map->player->position.x, game->map->renderOffset.y + game->map->player->position.y });
+                    Console_Refresh(game->console);
+                    return;
+                }
+
+                if(!(weapon->flags & MAPOBJECTFLAG_ITEMISRANGED))
+                {
+                    Game_Log(game, "You need to wield a ranged weapon.", CONSOLECOLORPAIR_WHITEBLACK, 0);
+                    Game_RenderUI(game);
+                    Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->map->player->position.x, game->map->renderOffset.y + game->map->player->position.y });
+                    Console_Refresh(game->console);
+                    return;
+                }
+
+                if(weapon->consumesItemWhenUsedID != -1)
+                {
+                    MapObjectAsItem *ammo = MapObject_GetItemByID(game->map->player, weapon->consumesItemWhenUsedID);
+                    if(ammo == NULL)
+                    {
+                        Game_Log(game, "Your weapon needs ammo to fire.", CONSOLECOLORPAIR_WHITEBLACK, 0);
+                        Game_RenderUI(game);
+                        Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->map->player->position.x, game->map->renderOffset.y + game->map->player->position.y });
+                        Console_Refresh(game->console);
+                        return;
+                    }
+                }
+
+                game->commandActive = COMMAND_FIRE;
+                game->commandPoint = (Point2D){ game->map->player->position.x, game->map->player->position.y };
+
+                MapObject *closest = Map_GetClosestObjectWithFlags(game->map, game->map->player->position, MAPOBJECTFLAG_ISHOSTILE);
+                if(closest != NULL)
+                {
+                    if(Map_GetObjectView(game->map, game->map->player, closest->position) == MAPOBJECTVIEW_VISIBLE)
+                        game->commandPoint = (Point2D){ closest->position.x, closest->position.y };
+                }
+
+                Game_Log(game, "Fire at what? (direction, enter, esc.)", CONSOLECOLORPAIR_YELLOWBLACK, 0);
+                Game_RenderUI(game);
+                Console_MoveCursor(game->console, (Point2D){ game->map->renderOffset.x + game->commandPoint.x, game->map->renderOffset.y + game->commandPoint.y });
+                Console_Refresh(game->console);
+                return;
+            }
+
             // 'g' / ',' == Get
 
             if(game->key == 44 || game->key == 103)
@@ -400,26 +566,57 @@ void Game_HandleInput(Game *game)
                 Console_Clear(game->console);
             }
 
+            // '?' == View help
+
+            if(game->key == '?')
+            {
+                game->screen = SCREEN_HELP;
+
+                Console_Clear(game->console);
+
+                Console_Write(game->console, 0, 0, " - Levels flood quicker as you progress upwards.", 0, 0);
+                Console_Write(game->console, 1, 0, " - You only loose oxygen in deep water.", 0, 0);
+                Console_Write(game->console, 2, 0, " - Use scuba gear to give you extra oxygen.", 0, 0);
+                Console_Write(game->console, 3, 0, " - Be wary of aquatic enemies once the level begins to flood.", 0, 0);
+
+                Console_Write(game->console, 5, 0, "                   Controls: ", 0, 0);
+                Console_Write(game->console, 6, 0, " - Movement:                   vi keys / numpad keys / arrow keys", 0, 0);
+                Console_Write(game->console, 7, 0, " - Drop:                       d", 0, 0);
+                Console_Write(game->console, 8, 0, " - Fire:                       f", 0, 0);
+                Console_Write(game->console, 9, 0, " - Look:                       x", 0, 0);
+                Console_Write(game->console, 10, 0, " - Open / close:               o", 0, 0);
+                Console_Write(game->console, 11, 0, " - Pick up:                    g / ,", 0, 0);
+                Console_Write(game->console, 12, 0, " - View help:                  ?", 0, 0);
+                Console_Write(game->console, 13, 0, " - View inventory:             i", 0, 0);
+                Console_Write(game->console, 14, 0, " - Wield / wear / put away:    w", 0, 0);
+
+                Console_Write(game->console, 17, 0, " PRESS ESC. TO CLOSE THIS SCREEN", 0, 0);
+                return;
+            }
+
             #if RELEASE == 0
-                // '*' == DEBUG: GENERATE NEW FLOOR
+
+                // '*' == DEBUG: GO TO NEXT FLOOR
 
                 if(game->key == '*')
                 {
                     game->map->level++;
                     MapTile_RemoveObject(Map_GetTile(game->map, game->map->player->position), game->map->player);
-                    Map_Clear(game->map);
                     Map_Generate(game->map);
 
                     Map_ResetObjectView(game->map, game->map->player);
                     Map_PlaceObject(game->map, game->map->player);
                     Console_Clear(game->console);
                 }
+
             #endif
 
             // Movement
 
             if(direction.x != 0 || direction.y != 0)
             {
+                MapObject_UpdateAttributesExcludeItemsWithFlags(game->map->player, MAPOBJECTFLAG_ITEMISRANGED);
+
                 MapObjectAction *action = MapObjectAction_Create(MAPOBJECTACTIONTYPE_MOVE);
                 action->direction = direction;
                 action->object = game->map->player;
@@ -531,32 +728,8 @@ void Game_MapNextTurn(Game *game, Map *map)
 {
     game->turn++;
 
-    map->levelFloodTimer--;
-    if(map->levelFloodTimer == 0)
-    {
-        map->levelFloodTimer = (int)map->levelFloodTimerSize;
-        Map_PlaceObject(map, Map_CreateObject(map, MAPOBJECTID_WATERSOURCE));
-        
-        if(map->levelFloodTimerSize > 10) map->levelFloodTimerSize -= 7 + rand() % 3;
-        map->levelFloodTimer = map->levelFloodTimerSize;
-
-        int aquaticMonsterIDs[10];
-        aquaticMonsterIDs[0] = MAPOBJECTID_TIGERFISH;
-        aquaticMonsterIDs[1] = MAPOBJECTID_TIGERFISH;
-        aquaticMonsterIDs[2] = MAPOBJECTID_TIGERFISH;
-        aquaticMonsterIDs[3] = MAPOBJECTID_TIGERFISH;
-        aquaticMonsterIDs[4] = MAPOBJECTID_TIGERFISH;
-        aquaticMonsterIDs[5] = MAPOBJECTID_TIGERFISH;
-        aquaticMonsterIDs[6] = MAPOBJECTID_TIGERFISH;
-        aquaticMonsterIDs[7] = MAPOBJECTID_TIGERFISH;
-        aquaticMonsterIDs[8] = MAPOBJECTID_TIGERFISH;
-        aquaticMonsterIDs[9] = MAPOBJECTID_TIGERFISH;
-
-        for(int i = 0; i < rand() % 3; i++)
-            Map_PlaceObject(map, Map_CreateObject(map, aquaticMonsterIDs[rand() % 10]));
-
+    if(Map_LevelFloodTimerTick(game->map))
         Game_Log(game, "The ship groans and water rushes upwards!", CONSOLECOLORPAIR_CYANBLACK, 0);
-    }
 
     while(true)
     {
@@ -625,7 +798,7 @@ void Game_MapObjectTakesTurn(Game *game, Map *map, MapObject *mapObject)
             else
             {
                 MapTile_RemoveObject(Map_GetTile(map, mapObject->position), mapObject);
-                Map_DestroyObject(map, mapObject);
+                MapObject_Destroy(mapObject);
             }
         }
 
@@ -798,7 +971,7 @@ void Game_RenderUI(Game *game)
     {
         Rect2D rect;
         rect.position = (Point2D){ 0, 0 };
-        rect.size = (Size2D){ 70, 15 };
+        rect.size = (Size2D){ 80, 15 };
         wchar_t wchrs[6] = { L'═', L'║', L'╔', L'╗', L'╝', L'╚' };
         Console_DrawRect(game->console, rect, wchrs, CONSOLECOLORPAIR_WHITEBLACK, 0);
 
@@ -824,7 +997,7 @@ void Game_RenderUI(Game *game)
                 }
 
                 Console_WriteF(game->console, 3 + i, 3, colorPair, 0, "%c. %s", 'a' + i, str);
-                int x = 20;
+                int x = 28;
                 if(item->flags & MAPOBJECTFLAG_ITEMSUPPLY02)
                     Console_WriteF(game->console, 3 + i, 3 + x, colorPair, 0, strDetails, item->o2);
                 else

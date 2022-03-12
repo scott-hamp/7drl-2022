@@ -8,7 +8,18 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
         if(!(action->object->flags & MAPOBJECTFLAG_CANATTACK) || !(action->target->flags & MAPOBJECTFLAG_ISLIVING)) 
             return action;
 
-        int hit = action->object->attackToHit + (rand() % 20);
+        int dist = Map_GetSimpleDistance(map, action->object->position, action->target->position);
+        int hit = action->object->attackToHit - (dist - 1) + (rand() % 20);
+
+        if(action->objectItem != NULL)
+        {
+            if(action->objectItem->consumesItemWhenUsedID != -1)
+            {
+                MapObjectAsItem *ammo = MapObject_GetItemByID(action->object, action->objectItem->consumesItemWhenUsedID);
+                MapObject_RemoveItemFromItems(action->object, ammo);
+            }
+        }
+        
         if(hit <= action->target->defense) return action;
 
         action->resultValueInt = action->object->attack;
@@ -20,7 +31,7 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
             if(action->target != map->player)
             {
                 MapTile_RemoveObject(Map_GetTile(map, action->target->position), action->target);
-                Map_DestroyObject(map, action->target);
+                MapObject_Destroy(action->target);
                 action->target = NULL;
             }
         }
@@ -136,13 +147,16 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
                 }
             }
 
-            target = MapTile_GetObjectWithFlags(tile, MAPOBJECTFLAG_CANOPEN);
-            if(target != NULL)
+            if(action->object->flags & MAPOBJECTFLAG_CANOPENOTHER)
             {
-                action->type = MAPOBJECTACTIONTYPE_OPEN;
-                action->target = target;
-                action->to = action->target->position;
-                return Map_AttemptObjectAction(map, action);
+                target = MapTile_GetObjectWithFlags(tile, MAPOBJECTFLAG_CANOPEN);
+                if(target != NULL)
+                {
+                    action->type = MAPOBJECTACTIONTYPE_OPEN;
+                    action->target = target;
+                    action->to = action->target->position;
+                    return Map_AttemptObjectAction(map, action);
+                }
             }
 
             action->resultMessage = "Tile impassable.";
@@ -187,7 +201,7 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
 
         MapObjectAsItem *item = MapObject_ToItem(action->target);
         MapTile_RemoveObject(tile, action->target);
-        Map_DestroyObject(map, action->target);
+        MapObject_Destroy(action->target);
         action->target = NULL;
         action->targetItem = item;
 
@@ -210,7 +224,6 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
 
         map->level++;
         MapTile_RemoveObject(tile, map->player);
-        Map_Clear(map);
         Map_Generate(map);
 
         Map_ResetObjectView(map, map->player);
@@ -229,19 +242,7 @@ void Map_Clear(Map *map)
         for(int x = 0; x < map->size.width; x++)
         {
             MapTile *tile = Map_GetTile(map, (Point2D){ x, y });
-            MapTile_DestroyObjects(tile, map);
-        }
-    }
-}
-
-void Map_ClearExcludePlayer(Map *map)
-{
-    for(int y = 0; y < map->size.height; y++)
-    {
-        for(int x = 0; x < map->size.width; x++)
-        {
-            MapTile *tile = Map_GetTile(map, (Point2D){ x, y });
-            MapTile_DestroyObjectsExcludePlayer(tile, map);
+            MapTile_DestroyObjects(tile);
         }
     }
 }
@@ -311,7 +312,7 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->hpRecoverTimerLength = 25;
         mapObject->layer = 0;
         mapObject->name = "Player";
-        mapObject->flags |= (MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_CANATTACK | MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_HASINVENTORY | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLACEINROOM | MAPOBJECTFLAG_PLAYER);
+        mapObject->flags |= (MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_CANATTACK | MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_CANOPENOTHER | MAPOBJECTFLAG_HASINVENTORY | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLACEINROOM | MAPOBJECTFLAG_PLAYER);
         mapObject->hp = 10;
         mapObject->hpMaxBase = 10;
         mapObject->o2 = 30;
@@ -347,6 +348,32 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->wchrAlt = L'/';
     }
 
+    if(id == MAPOBJECTID_HARPOON) // Harpoon
+    {
+        mapObject->description = "A harpoon.";
+        mapObject->details = "[AMMO]";
+        mapObject->layer = 2;
+        mapObject->name = "harpoon";
+        mapObject->flags |= (MAPOBJECTFLAG_ISITEM | MAPOBJECTFLAG_PLACEINROOM);
+        mapObject->wchr = L'{';
+        mapObject->wchrAlt = L'{';
+    }
+
+    if(id == MAPOBJECTID_HARPOONGUN) // Harpoon gun
+    {
+        mapObject->attack = 2;
+        mapObject->attackToHit = 1;
+        mapObject->consumesItemWhenUsedID = MAPOBJECTID_HARPOON;
+        mapObject->description = "A harpoon gun.";
+        mapObject->details = "[ATT: 2 +1]";
+        mapObject->equipAt = MAPOBJECTEQUIPAT_WEAPON;
+        mapObject->layer = 2;
+        mapObject->name = "harpoon gun";
+        mapObject->flags |= (MAPOBJECTFLAG_ISEQUIPMENT | MAPOBJECTFLAG_ITEMISRANGED | MAPOBJECTFLAG_ISITEM | MAPOBJECTFLAG_PLACEINROOM);
+        mapObject->wchr = L'}';
+        mapObject->wchrAlt = L'}';
+    }
+
     if(id == MAPOBJECTID_LIFEVEST) // Lifevest
     {
         mapObject->defense = 2;
@@ -358,6 +385,30 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->flags |= (MAPOBJECTFLAG_ISEQUIPMENT | MAPOBJECTFLAG_ISITEM | MAPOBJECTFLAG_PLACEINROOM);
         mapObject->wchr = L'(';
         mapObject->wchrAlt = L'(';
+    }
+
+    if(id == MAPOBJECTID_MANGYDOG) // Mangy dog
+    {
+        mapObject->attackBase = 2;
+        mapObject->attackDistance = 1;
+        mapObject->attackToHitBase = -1;
+        mapObject->attackVerbs[0] = "bite";
+        mapObject->attackVerbs[1] = "bites";
+        mapObject->colorPair = CONSOLECOLORPAIR_REDBLACK;
+        mapObject->defenseBase = 2;
+        mapObject->description = "A mangy dog.";
+        mapObject->layer = 1;
+        mapObject->name = "mangy dog";
+        mapObject->flags |= (MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_CANATTACK | MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_ISHOSTILE | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLACEINROOM);
+        mapObject->hp = 4;
+        mapObject->hpMaxBase = 4;
+        mapObject->o2 = 8;
+        mapObject->o2MaxBase = 8;
+        mapObject->turnTicks = 10;
+        mapObject->turnTicksSize = 10;
+        mapObject->wchr = L'd';
+        mapObject->wchrAlt = L'd';
+        hasView = true;
     }
 
     if(id == MAPOBJECTID_SCUBAMASK) // Scuba mask
@@ -378,7 +429,7 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
     {
         mapObject->defense = 1;
         mapObject->description = "A scuba tank.";
-        mapObject->details = "[DEF: 1, O2: +%d / 100]";
+        mapObject->details = "[DEF: 1, O2: +%d / 500]";
         mapObject->equipAt = MAPOBJECTEQUIPAT_BACK;
         mapObject->layer = 2;
         mapObject->name = "scuba tank";
@@ -386,6 +437,28 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->flags |= (MAPOBJECTFLAG_ISEQUIPMENT | MAPOBJECTFLAG_ISITEM | MAPOBJECTFLAG_ITEMINCREASE02 | MAPOBJECTFLAG_ITEMSUPPLY02 | MAPOBJECTFLAG_PLACEINROOM);
         mapObject->wchr = L'[';
         mapObject->wchrAlt = L'[';
+    }
+
+    if(id == MAPOBJECTID_SMALLEEL) // Small eel
+    {
+        mapObject->attackBase = 1;
+        mapObject->attackDistance = 1;
+        mapObject->attackToHitBase = 1;
+        mapObject->attackVerbs[0] = "nip";
+        mapObject->attackVerbs[1] = "nips";
+        mapObject->colorPair = CONSOLECOLORPAIR_GREENBLACK;
+        mapObject->defenseBase = 1;
+        mapObject->description = "A small eel.";
+        mapObject->layer = 1;
+        mapObject->name = "small eel";
+        mapObject->flags |= (MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_CANATTACK | MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_ISAQUATIC | MAPOBJECTFLAG_ISHOSTILE | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLACEINWATER);
+        mapObject->hp = 3;
+        mapObject->hpMaxBase = 3;
+        mapObject->turnTicks = 9;
+        mapObject->turnTicksSize = 9;
+        mapObject->wchr = L'e';
+        mapObject->wchrAlt = L'e';
+        hasView = true;
     }
 
     if(id == MAPOBJECTID_TIGERFISH) // Tigerfish
@@ -462,17 +535,37 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
 void Map_Destroy(Map *map)
 {
     for(int i = 0; i < map->size.width * map->size.height; i++)
-        MapTile_Destroy(map->tiles[i], map);
+        MapTile_Destroy(map->tiles[i]);
     free(map->tiles);
 }
 
-void Map_DestroyObject(Map* map, MapObject *mapObject)
+bool Map_LevelFloodTimerTick(Map *map)
 {
-    for(int i = 0; i < mapObject->itemsCount; i++)
-        Map_DestroyObject(map, mapObject->items[i]);
-    if(mapObject->view != NULL)
-        free(mapObject->view);
-    free(mapObject);
+    map->levelFloodTimer--;
+    if(map->levelFloodTimer > 0) return false;
+
+    map->levelFloodTimer = (int)map->levelFloodTimerSize;
+    Map_PlaceObject(map, Map_CreateObject(map, MAPOBJECTID_WATERSOURCE));
+    
+    if(map->levelFloodTimerSize > 10) map->levelFloodTimerSize -= 7 + rand() % 3;
+    map->levelFloodTimer = map->levelFloodTimerSize;
+
+    int aquaticMonsterIDs[10];
+    aquaticMonsterIDs[0] = MAPOBJECTID_SMALLEEL;
+    aquaticMonsterIDs[1] = MAPOBJECTID_SMALLEEL;
+    aquaticMonsterIDs[2] = MAPOBJECTID_SMALLEEL;
+    aquaticMonsterIDs[3] = MAPOBJECTID_SMALLEEL;
+    aquaticMonsterIDs[4] = MAPOBJECTID_SMALLEEL;
+    aquaticMonsterIDs[5] = MAPOBJECTID_SMALLEEL;
+    aquaticMonsterIDs[6] = MAPOBJECTID_TIGERFISH;
+    aquaticMonsterIDs[7] = MAPOBJECTID_TIGERFISH;
+    aquaticMonsterIDs[8] = MAPOBJECTID_TIGERFISH;
+    aquaticMonsterIDs[9] = MAPOBJECTID_TIGERFISH;
+
+    for(int i = 0; i < rand() % 3; i++)
+        Map_PlaceObject(map, Map_CreateObject(map, aquaticMonsterIDs[rand() % 10]));
+
+    return true;
 }
 
 void Map_Generate(Map *map)
@@ -490,7 +583,7 @@ void Map_Generate(Map *map)
             {
                 MapTile *tile = map->tiles[(y * map->size.width) + x];
                 MapTile_SetType(tile, MAPTILETYPE_WALL);
-                MapTile_DestroyObjects(tile, map);
+                MapTile_DestroyObjects(tile);
             }
         }
 
@@ -606,6 +699,7 @@ void Map_Generate(Map *map)
             if(at.x > 0 && at.y > 0 && at.x < map->size.width - 1 && at.y < map->size.height - 1)
                 MapTile_SetType(map->tiles[(at.y * map->size.width) + at.x], MAPTILETYPE_FLOOR);
 
+            /*
             if(rand() % 10 >= 8)
             {
                 if(rand() % 10 >= 3)
@@ -619,6 +713,34 @@ void Map_Generate(Map *map)
                 if(to.x < at.x) at.x--;
                 if(to.y > at.y) at.y++;
                 if(to.y < at.y) at.y--;
+            }
+            */
+
+            if(at.x == to.x)
+            {
+                if(to.y > at.y) at.y++;
+                if(to.y < at.y) at.y--;
+            }
+            else
+            {
+                if(at.x == to.x)
+                {
+                    if(to.x > at.x) at.x++;
+                    if(to.x < at.x) at.x--;
+                }
+                else
+                {
+                    if(rand() % 10 >= 5)
+                    {
+                        if(to.x > at.x) at.x++;
+                        if(to.x < at.x) at.x--;
+                    }
+                    else
+                    {
+                        if(to.y > at.y) at.y++;
+                        if(to.y < at.y) at.y--;
+                    }
+                }
             }
         }
 
@@ -652,11 +774,11 @@ void Map_Generate(Map *map)
     monsterIDs[2] = MAPOBJECTID_BILGERAT;
     monsterIDs[3] = MAPOBJECTID_BILGERAT;
     monsterIDs[4] = MAPOBJECTID_BILGERAT;
-    monsterIDs[5] = MAPOBJECTID_BILGERAT;
-    monsterIDs[6] = MAPOBJECTID_BILGERAT;
-    monsterIDs[7] = MAPOBJECTID_BILGERAT;
-    monsterIDs[8] = MAPOBJECTID_BILGERAT;
-    monsterIDs[9] = MAPOBJECTID_BILGERAT;
+    monsterIDs[5] = MAPOBJECTID_MANGYDOG;
+    monsterIDs[6] = MAPOBJECTID_MANGYDOG;
+    monsterIDs[7] = MAPOBJECTID_MANGYDOG;
+    monsterIDs[8] = MAPOBJECTID_MANGYDOG;
+    monsterIDs[9] = MAPOBJECTID_MANGYDOG;
 
     for(int i = 0; i < 3 + rand() % 2; i++)
         Map_PlaceObject(map, Map_CreateObject(map, monsterIDs[rand() % 10]));
@@ -664,17 +786,42 @@ void Map_Generate(Map *map)
     int itemIDs[10];
     itemIDs[0] = MAPOBJECTID_DIVEKNIFE;
     itemIDs[1] = MAPOBJECTID_DIVEKNIFE;
-    itemIDs[2] = MAPOBJECTID_DIVEKNIFE;
+    itemIDs[2] = MAPOBJECTID_HARPOON;
     itemIDs[3] = MAPOBJECTID_LIFEVEST;
     itemIDs[4] = MAPOBJECTID_LIFEVEST;
-    itemIDs[5] = MAPOBJECTID_LIFEVEST;
+    itemIDs[5] = MAPOBJECTID_HARPOONGUN;
     itemIDs[6] = MAPOBJECTID_SCUBAMASK;
     itemIDs[7] = MAPOBJECTID_SCUBAMASK;
-    itemIDs[8] = MAPOBJECTID_SCUBAMASK;
+    itemIDs[8] = MAPOBJECTID_HARPOON;
     itemIDs[9] = MAPOBJECTID_SCUBATANK;
 
     for(int i = 0; i < 3 + rand() % 2; i++)
         Map_PlaceObject(map, Map_CreateObject(map, itemIDs[rand() % 10]));
+
+    Map_PlaceObject(map, Map_CreateObject(map, MAPOBJECTID_HARPOON));
+    Map_PlaceObject(map, Map_CreateObject(map, MAPOBJECTID_HARPOONGUN));
+}
+
+MapObject *Map_GetClosestObjectWithFlags(Map *map, Point2D to, uint32_t flags)
+{
+    MapObject *closest = NULL;
+    int dist = 1000;
+
+    for(int y = 0; y < map->size.height; y++)
+    {
+        for(int x = 0; x < map->size.width; x++)
+        {
+            MapObject *obj = MapTile_GetObjectWithFlags(Map_GetTile(map, (Point2D){ x, y }), flags);
+            if(obj == NULL) continue;
+            int d = Map_GetSimpleDistance(map, obj->position, to);
+            if(d >= dist) continue;
+
+            closest = obj;
+            dist = d;
+        }
+    }
+
+    return closest;
 }
 
 int Map_GetObjectView(Map *map, MapObject *mapObject, Point2D point)
@@ -923,6 +1070,12 @@ void Map_PlaceObject(Map *map, MapObject *mapObject)
             if(!(tile->passable & MAPTILEPASSABLE_SOLID)) continue;
         }
 
+        if(mapObject->flags & MAPOBJECTFLAG_ISHOSTILE)
+        {
+            if(Map_GetSimpleDistance(map, point, map->player->position) < 5)
+                continue;
+        }
+
         mapObject->position = point;
         MapTile_AddObject(tile, mapObject);
         Map_UpdateObjectView(map, mapObject);
@@ -1035,6 +1188,30 @@ void Map_UpdateObjectView(Map* map, MapObject *mapObject)
         mapObject->view[i] = MAPOBJECTVIEW_SEEN;
     }
 
+    // CRUDE RAYCASTING SOLUTION:
+
+    int viewLength = 20;
+
+    for(int d = 0; d < 360; d++)
+    {
+        int vl = viewLength;
+        for(int l = 0; l < vl; l++)
+        {
+            Point2D point = (Point2D){ round(mapObject->position.x + sin(d) * l), round(mapObject->position.y + cos(d) * l) };
+            MapTile *tile = Map_GetTile(map, point);
+            if(tile == NULL) break;
+
+            if(Map_GetRoomIndexContaining(map, point) == -1) vl /= 2;
+
+            mapObject->view[(point.y * map->size.width) + point.x] = MAPOBJECTVIEW_VISIBLE;
+
+            if(!(tile->passable & MAPTILEPASSABLE_LIGHT)) break;
+        }
+    }
+
+    /*
+    // SIMPLE ROOM-BASED SOLUTION:
+
     Rect2D viewRect;
     int ric = Map_GetRoomIndexContaining(map, mapObject->position);
 
@@ -1056,23 +1233,6 @@ void Map_UpdateObjectView(Map* map, MapObject *mapObject)
         {
             Point2D point = (Point2D){viewRect.position.x + x, viewRect.position.y + y};
             mapObject->view[(point.y * map->size.width) + point.x] = MAPOBJECTVIEW_VISIBLE;
-        }
-    }
-
-    /*
-    int viewLength = (Map_GetRoomIndexContaining(map, mapObject->position) > -1) ? 5 : 2;
-
-    for(int d = 0; d < 360; d++)
-    {
-        for(int l = 0; l < viewLength; l++)
-        {
-            Point2D point = (Point2D){ round(mapObject->position.x + sin(d) * l), round(mapObject->position.y + cos(d) * l) };
-            MapTile *tile = Map_GetTile(map, point);
-            if(tile == NULL) break;
-
-            mapObject->view[(point.y * map->size.width) + point.x] = MAPOBJECTVIEW_VISIBLE;
-
-            if(!(tile->passable & MAPTILEPASSABLE_LIGHT)) break;
         }
     }
     */
@@ -1110,6 +1270,7 @@ MapObject *MapObject_Create(const char *name)
     mapObject->attackToHit = 0;
     mapObject->attackToHitBase = 0;
     mapObject->colorPair = CONSOLECOLORPAIR_WHITEBLACK;
+    mapObject->consumesItemWhenUsedID = -1;
     mapObject->defense = 0;
     mapObject->defenseBase = 0;
     mapObject->description = "Nothing.";
@@ -1136,6 +1297,15 @@ MapObject *MapObject_Create(const char *name)
     return mapObject;
 }
 
+void MapObject_Destroy(MapObject *mapObject)
+{
+    for(int i = 0; i < mapObject->itemsCount; i++)
+        MapObjectAsItem_Destroy(mapObject->items[i]);
+    if(mapObject->view != NULL)
+        free(mapObject->view);
+    free(mapObject);
+}
+
 int MapObject_GetEquippedAt(MapObject *mapObject, MapObjectAsItem *item)
 {
     for(int i = 0; i < MAPOBJECTEQUIPAT_SLOTSCOUNT; i++)
@@ -1146,6 +1316,17 @@ int MapObject_GetEquippedAt(MapObject *mapObject, MapObjectAsItem *item)
     }
 
     return -1;
+}
+
+MapObjectAsItem *MapObject_GetItemByID(MapObject *mapObject, int itemID)
+{
+    for(int i = 0; i < mapObject->itemsCount; i++)
+    {
+        if(mapObject->items[i]->id != itemID) continue;
+        return mapObject->items[i];
+    }
+
+    return NULL;
 }
 
 void MapObject_RemoveItemFromItems(MapObject *mapObject, MapObjectAsItem *item)
@@ -1170,6 +1351,7 @@ MapObjectAsItem *MapObject_ToItem(MapObject *mapObject)
     item->attack = mapObject->attack;
     item->attackToHit = mapObject->attackToHit;
     item->colorPair = mapObject->colorPair;
+    item->consumesItemWhenUsedID = mapObject->consumesItemWhenUsedID;
     item->defense = mapObject->defense;
 
     item->description = malloc(sizeof(char) * (strlen(mapObject->description) + 1));
@@ -1225,6 +1407,33 @@ void MapObject_UpdateAttributes(MapObject *mapObject)
     if(mapObject->o2 > mapObject->o2Max) mapObject->o2 = mapObject->o2Max;
 }
 
+void MapObject_UpdateAttributesExcludeItemsWithFlags(MapObject *mapObject, uint32_t flags)
+{
+    if(mapObject->flags & MAPOBJECTFLAG_ISITEM) return;
+
+    mapObject->attack = mapObject->attackBase;
+    mapObject->attackToHit = mapObject->attackToHitBase;
+    mapObject->defense = mapObject->defenseBase;
+    mapObject->hpMax = mapObject->hpMaxBase;
+    mapObject->o2Max = mapObject->o2MaxBase;
+
+    for(int i = 0; i < mapObject->itemsCount; i++)
+    {
+        int equippedAt = MapObject_GetEquippedAt(mapObject, mapObject->items[i]);
+        if(equippedAt == -1) continue;
+        if(mapObject->items[i]->flags & flags) continue;
+
+        mapObject->attack += mapObject->items[i]->attack;
+        mapObject->attackToHit += mapObject->items[i]->attackToHit;
+        mapObject->defense += mapObject->items[i]->defense;
+        mapObject->hpMax += mapObject->items[i]->hp;
+        mapObject->o2Max += mapObject->items[i]->o2;
+    }
+
+    if(mapObject->hp > mapObject->hpMax) mapObject->hp = mapObject->hpMax;
+    if(mapObject->o2 > mapObject->o2Max) mapObject->o2 = mapObject->o2Max;
+}
+
 void MapObject_UpdateItems(MapObject *mapObject)
 {
     if(!(mapObject->flags & MAPOBJECTFLAG_HASINVENTORY)) return;
@@ -1244,6 +1453,7 @@ MapObjectAction *MapObjectAction_Create(int type)
     MapObjectAction *action = malloc(sizeof(MapObjectAction));
 
     action->object = NULL;
+    action->objectItem = NULL;
     action->result = false;
     action->resultMessage = "";
     action->resultValueInt = 0;
@@ -1281,27 +1491,34 @@ void MapTile_AddObject(MapTile *tile, MapObject *mapObject)
     MapTile_UpdatePassable(tile);
 }
 
-void MapTile_Destroy(MapTile *tile, Map *map)
+void MapTile_Destroy(MapTile *tile)
 {
-    MapTile_DestroyObjects(tile, map);
+    MapTile_DestroyObjects(tile);
     free(tile);
 }
 
-void MapTile_DestroyObjects(MapTile *tile, Map *map)
+void MapTile_DestroyObject(MapTile *tile, MapObject *mapObject)
 {
-    for(int i = 0; i < tile->objectsCount; i++)
-        Map_DestroyObject(map, tile->objects[i]);
-    tile->objectsCount = 0;
-}
-
-void MapTile_DestroyObjectsExcludePlayer(MapTile *tile, Map *map)
-{
+    int index = -1;
     for(int i = 0; i < tile->objectsCount; i++)
     {
-        if(tile->objects[i] == map->player) continue;
-        Map_DestroyObject(map, tile->objects[i]);
-        tile->objectsCount--;
+        if(tile->objects[i] != mapObject) continue;
+        index = i;
+        break;
     }
+
+    if(index == -1) return;
+
+    MapObject *object = tile->objects[index];
+    MapTile_RemoveObject(tile, object);
+    MapObject_Destroy(object);
+}
+
+void MapTile_DestroyObjects(MapTile *tile)
+{
+    for(int i = 0; i < tile->objectsCount; i++)
+        MapObject_Destroy(tile->objects[i]);
+    tile->objectsCount = 0;
 }
 
 MapObject *MapTile_GetObjectWithFlags(MapTile *tile, uint32_t flags)
