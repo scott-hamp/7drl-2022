@@ -24,7 +24,7 @@ Game *Game_Create(Console *console)
     Console_Write(game->console, 5, 0, "                                               '", CONSOLECOLORPAIR_CYANBLACK, 0);
 
     Console_Write(game->console, 6, 0, "This game is a traditional roguelike created by Begebies for the ", 0, 0);
-    Console_Write(game->console, 7, 0, "  2022 Seven-Day Roguelike. You're stuck on a sinking ship, and ", 0, 0);
+    Console_Write(game->console, 7, 0, "  2022 Seven Day Roguelike. You're stuck on a sinking ship, and ", 0, 0);
     Console_Write(game->console, 8, 0, "  must quickly ascend to the next floor before water floods the ", 0, 0);
     Console_Write(game->console, 9, 0, "  area, while making sure to grab items to help you survive.", 0, 0);
 
@@ -37,9 +37,10 @@ Game *Game_Create(Console *console)
     Console_Write(game->console, 17, 0, " - Pick up:                    g / ,", 0, 0);
     Console_Write(game->console, 18, 0, " - View help:                  ?", 0, 0);
     Console_Write(game->console, 19, 0, " - View inventory:             i", 0, 0);
-    Console_Write(game->console, 20, 0, " - Wield / wear / put away:    w", 0, 0);
+    Console_Write(game->console, 20, 0, " - Wait:                       . / Numpad 5", 0, 0);
+    Console_Write(game->console, 21, 0, " - Wield / wear / put away:    w", 0, 0);
 
-    Console_Write(game->console, 23, 0, "                    PRESS ANY KEY TO START!", CONSOLECOLORPAIR_YELLOWBLACK, 0);
+    Console_Write(game->console, 24, 0, "                    PRESS ANY KEY TO START!", CONSOLECOLORPAIR_YELLOWBLACK, 0);
 
     Console_Refresh(game->console);
 
@@ -574,23 +575,25 @@ void Game_HandleInput(Game *game)
 
                 Console_Clear(game->console);
 
-                Console_Write(game->console, 0, 0, " - Levels flood quicker as you progress upwards.", 0, 0);
-                Console_Write(game->console, 1, 0, " - You only loose oxygen in deep water.", 0, 0);
-                Console_Write(game->console, 2, 0, " - Use scuba gear to give you extra oxygen.", 0, 0);
-                Console_Write(game->console, 3, 0, " - Be wary of aquatic enemies once the level begins to flood.", 0, 0);
+                Console_Write(game->console, 0, 0, " - Try to wait to recover hp before moving on.", 0, 0);
+                Console_Write(game->console, 1, 0, " - Levels flood quicker as you progress upwards.", 0, 0);
+                Console_Write(game->console, 2, 0, " - You only loose oxygen in deep water.", 0, 0);
+                Console_Write(game->console, 3, 0, " - Use scuba gear to give you extra oxygen.", 0, 0);
+                Console_Write(game->console, 4, 0, " - Be wary of aquatic enemies once the level begins to flood.", 0, 0);
 
-                Console_Write(game->console, 5, 0, "                   Controls: ", 0, 0);
-                Console_Write(game->console, 6, 0, " - Movement:                   vi keys / numpad keys / arrow keys", 0, 0);
-                Console_Write(game->console, 7, 0, " - Drop:                       d", 0, 0);
-                Console_Write(game->console, 8, 0, " - Fire:                       f", 0, 0);
-                Console_Write(game->console, 9, 0, " - Look:                       x", 0, 0);
-                Console_Write(game->console, 10, 0, " - Open / close:               o", 0, 0);
-                Console_Write(game->console, 11, 0, " - Pick up:                    g / ,", 0, 0);
-                Console_Write(game->console, 12, 0, " - View help:                  ?", 0, 0);
-                Console_Write(game->console, 13, 0, " - View inventory:             i", 0, 0);
-                Console_Write(game->console, 14, 0, " - Wield / wear / put away:    w", 0, 0);
+                Console_Write(game->console, 6, 0, "                   Controls: ", 0, 0);
+                Console_Write(game->console, 7, 0, " - Movement:                   vi keys / numpad keys / arrow keys", 0, 0);
+                Console_Write(game->console, 8, 0, " - Drop:                       d", 0, 0);
+                Console_Write(game->console, 9, 0, " - Fire:                       f", 0, 0);
+                Console_Write(game->console, 10, 0, " - Look:                       x", 0, 0);
+                Console_Write(game->console, 11, 0, " - Open / close:               o", 0, 0);
+                Console_Write(game->console, 12, 0, " - Pick up:                    g / ,", 0, 0);
+                Console_Write(game->console, 13, 0, " - View help:                  ?", 0, 0);
+                Console_Write(game->console, 14, 0, " - View inventory:             i", 0, 0);
+                Console_Write(game->console, 15, 0, " - Wait:                       . / Numpad 5", 0, 0);
+                Console_Write(game->console, 16, 0, " - Wield / wear / put away:    w", 0, 0);
 
-                Console_Write(game->console, 17, 0, " PRESS ESC. TO CLOSE THIS SCREEN", 0, 0);
+                Console_Write(game->console, 19, 0, " PRESS ESC. TO CLOSE THIS SCREEN", 0, 0);
                 return;
             }
 
