@@ -1,0 +1,31 @@
+.-,--'                .  .         .-,--.          .  .       
+ \|__ ,-. ,-. ,-,-.   |- |-. ,-.   ' |   \ ,-. ,-. |- |-. ,-. 
+  |   |   | | | | |   |  | | |-'   , |   / |-' | | |  | | `-. 
+ `'   '   `-' ' ' '   `' ' ' `-'   `-^--'  `-' |-' `' ' ' `-' 
+                                               |              
+                                               '
+
+This game is a traditional roguelike created by Begebies for the 
+  2022 Seven-Day Roguelike. You're stuck on a sinking ship, and 
+  must quickly ascend to the next floor before water floods the 
+  area, while making sure to grab items to help you survive.
+  
+                            Controls: 
+ - Movement:                   vi keys / numpad keys / arrow keys
+ - Drop:                       d
+ - Fire:                       f
+ - Look:                       x
+ - Open / close:               o
+ - Pick up:                    g / ,
+ - View help:                  ?
+ - View inventory:             i
+ - Wield / wear / put away:    w
+
+For the Windows version I'd recommended using the terminal from the 
+  Microsoft store, (https://www.microsoft.com/en-us/p/windows-terminal/),
+  as this gives you complete control over the font, colors, etc. I've 
+  included my favorite roguelike font, JetBrains Mono, if you want to try 
+  the game with it.
+
+If you have any feedback or encounter any bugs, please feel free to 
+  let me know. Thanks for playing!

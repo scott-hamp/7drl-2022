@@ -28,9 +28,9 @@ ifeq ($(RELEASE),0)
 	APPNAME = debug/app
 else
 	ifeq ($(BUILD),linux)
-		APPNAME = release/linux/$(APPNAMESELF)_linux
+		APPNAME = release/builds/linux/$(APPNAMESELF)_linux
 	else
-		APPNAME = release/win64/$(APPNAMESELF)_win64
+		APPNAME = release/builds/win64/$(APPNAMESELF)_win64
 	endif
 endif
 
