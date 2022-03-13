@@ -107,6 +107,10 @@ MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action)
         }
 
         action->object->equipment[action->targetItem->equipAt] = action->targetItem;
+
+        if(action->targetItem->flags & MAPOBJECTFLAG_ITEMINCREASE02)
+            action->object->o2 += action->targetItem->o2;
+
         action->resultMessage = "You ready the %s.";
         action->result = true;
         return action;
@@ -797,9 +801,6 @@ void Map_Generate(Map *map)
 
     for(int i = 0; i < 3 + rand() % 2; i++)
         Map_PlaceObject(map, Map_CreateObject(map, itemIDs[rand() % 10]));
-
-    Map_PlaceObject(map, Map_CreateObject(map, MAPOBJECTID_HARPOON));
-    Map_PlaceObject(map, Map_CreateObject(map, MAPOBJECTID_HARPOONGUN));
 }
 
 MapObject *Map_GetClosestObjectWithFlags(Map *map, Point2D to, uint32_t flags)
