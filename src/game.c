@@ -21,27 +21,26 @@ Game *Game_Create(Console *console)
     Console_Write(game->console, 2, 0, "  |   |   | | | | |   |  | | |-'   , |   / |-' | | |  | | `-. ", CONSOLECOLORPAIR_CYANBLACK, 0);
     Console_Write(game->console, 3, 0, " `'   '   `-' ' ' '   `' ' ' `-'   `-^--'  `-' |-' `' ' ' `-' ", CONSOLECOLORPAIR_CYANBLACK, 0);
     Console_Write(game->console, 4, 0, "                                               |              ", CONSOLECOLORPAIR_CYANBLACK, 0);
-    Console_Write(game->console, 5, 0, "                                               '", CONSOLECOLORPAIR_CYANBLACK, 0);
 
-    Console_Write(game->console, 6, 0, "This game is a traditional roguelike created by Begebies for the ", 0, 0);
-    Console_Write(game->console, 7, 0, "  2022 Seven Day Roguelike. You're stuck on a sinking ship, and ", 0, 0);
-    Console_Write(game->console, 8, 0, "  must quickly ascend to the next floor before water floods the ", 0, 0);
-    Console_Write(game->console, 9, 0, "  area, while making sure to grab items to help you survive.", 0, 0);
+    Console_Write(game->console, 5, 0, "This game is a traditional roguelike created by Begebies for the ", 0, 0);
+    Console_Write(game->console, 6, 0, "  2022 Seven Day Roguelike. You're stuck on a sinking ship, and ", 0, 0);
+    Console_Write(game->console, 7, 0, "  must quickly ascend to the next floor before water floods the ", 0, 0);
+    Console_Write(game->console, 8, 0, "  area, while making sure to grab items to help you survive.", 0, 0);
 
-    Console_Write(game->console, 11, 0, "                            Controls: ", 0, 0);
-    Console_Write(game->console, 12, 0, " Movement:     vi keys / numpad keys / arrow keys", 0, 0);
-    Console_Write(game->console, 13, 0, " Commands: ", 0, 0);
-    Console_Write(game->console, 14, 0, " - Drop:                               d", 0, 0);
-    Console_Write(game->console, 15, 0, " - Fire:                               f", 0, 0);
-    Console_Write(game->console, 16, 0, " - Look:                               x", 0, 0);
-    Console_Write(game->console, 17, 0, " - Open / close:                       o", 0, 0);
-    Console_Write(game->console, 18, 0, " - Pick up:                            g / ,", 0, 0);
-    Console_Write(game->console, 19, 0, " - View help:                          ?", 0, 0);
-    Console_Write(game->console, 20, 0, " - View inventory:                     i", 0, 0);
-    Console_Write(game->console, 21, 0, " - Wait:                               . / Numpad 5", 0, 0);
-    Console_Write(game->console, 22, 0, " - Wield / wear / remove / put away:   w", 0, 0);
+    Console_Write(game->console, 10, 0, "                            Controls: ", 0, 0);
+    Console_Write(game->console, 11, 0, " Movement:     vi keys / numpad keys / arrow keys", 0, 0);
+    Console_Write(game->console, 12, 0, " Commands: ", 0, 0);
+    Console_Write(game->console, 13, 0, " - Drop:                               d", 0, 0);
+    Console_Write(game->console, 14, 0, " - Fire:                               f", 0, 0);
+    Console_Write(game->console, 15, 0, " - Look:                               x", 0, 0);
+    Console_Write(game->console, 16, 0, " - Open / close:                       o", 0, 0);
+    Console_Write(game->console, 17, 0, " - Pick up:                            g / ,", 0, 0);
+    Console_Write(game->console, 18, 0, " - View help:                          ?", 0, 0);
+    Console_Write(game->console, 19, 0, " - View inventory:                     i", 0, 0);
+    Console_Write(game->console, 20, 0, " - Wait:                               . / Numpad 5", 0, 0);
+    Console_Write(game->console, 21, 0, " - Wield / wear / remove / put away:   w", 0, 0);
 
-    Console_Write(game->console, 24, 0, "                    PRESS ANY KEY TO START!", CONSOLECOLORPAIR_YELLOWBLACK, 0);
+    Console_Write(game->console, 23, 0, "                    PRESS ANY KEY TO START!", CONSOLECOLORPAIR_YELLOWBLACK, 0);
 
     Console_Refresh(game->console);
 
@@ -576,25 +575,28 @@ void Game_HandleInput(Game *game)
 
                 Console_Clear(game->console);
 
-                Console_Write(game->console, 0, 0, " - Try to wait to recover hp before moving on.", 0, 0);
-                Console_Write(game->console, 1, 0, " - Levels flood quicker as you progress upwards.", 0, 0);
-                Console_Write(game->console, 2, 0, " - You only loose oxygen in deep water.", 0, 0);
-                Console_Write(game->console, 3, 0, " - Use scuba gear to give you extra oxygen.", 0, 0);
-                Console_Write(game->console, 4, 0, " - Be wary of aquatic enemies once the level begins to flood.", 0, 0);
+                Console_Write(game->console, 0, 0, " Help ", CONSOLECOLORPAIR_BLACKWHITE, A_BOLD);
 
-                Console_Write(game->console, 6, 0, "                   Controls: ", 0, 0);
-                Console_Write(game->console, 7, 0, " - Movement:                   vi keys / numpad keys / arrow keys", 0, 0);
-                Console_Write(game->console, 8, 0, " - Drop:                       d", 0, 0);
-                Console_Write(game->console, 9, 0, " - Fire:                       f", 0, 0);
-                Console_Write(game->console, 10, 0, " - Look:                       x", 0, 0);
-                Console_Write(game->console, 11, 0, " - Open / close:               o", 0, 0);
-                Console_Write(game->console, 12, 0, " - Pick up:                    g / ,", 0, 0);
-                Console_Write(game->console, 13, 0, " - View help:                  ?", 0, 0);
-                Console_Write(game->console, 14, 0, " - View inventory:             i", 0, 0);
-                Console_Write(game->console, 15, 0, " - Wait:                       . / Numpad 5", 0, 0);
-                Console_Write(game->console, 16, 0, " - Wield / wear / put away:    w", 0, 0);
+                Console_Write(game->console, 2, 0, " - Try to wait to recover hp before moving on.", 0, 0);
+                Console_Write(game->console, 3, 0, " - Levels flood quicker as you progress upwards.", 0, 0);
+                Console_Write(game->console, 4, 0, " - You only loose oxygen in deep water.", 0, 0);
+                Console_Write(game->console, 5, 0, " - Use scuba gear to give you extra oxygen.", 0, 0);
+                Console_Write(game->console, 6, 0, " - Be wary of aquatic enemies once the level begins to flood.", 0, 0);
 
-                Console_Write(game->console, 19, 0, " PRESS ESC. TO CLOSE THIS SCREEN", 0, 0);
+                Console_Write(game->console, 8, 0, "                   Controls: ", 0, 0);
+                Console_Write(game->console, 9, 0, " Movement:   vi keys / numpad keys / arrow keys", 0, 0);
+                Console_Write(game->console, 10, 0, " Commands:", 0, 0);
+                Console_Write(game->console, 11, 0, " - Drop:                                d", 0, 0);
+                Console_Write(game->console, 12, 0, " - Fire:                                f", 0, 0);
+                Console_Write(game->console, 13, 0, " - Look:                               x", 0, 0);
+                Console_Write(game->console, 14, 0, " - Open / close:                       o", 0, 0);
+                Console_Write(game->console, 15, 0, " - Pick up:                            g / ,", 0, 0);
+                Console_Write(game->console, 16, 0, " - View help:                          ?", 0, 0);
+                Console_Write(game->console, 17, 0, " - View inventory:                     i", 0, 0);
+                Console_Write(game->console, 18, 0, " - Wait:                               . / Numpad 5", 0, 0);
+                Console_Write(game->console, 19, 0, " - Wield / wear / remove / put away:   w", 0, 0);
+
+                Console_Write(game->console, 22, 0, " PRESS ESC. TO CLOSE THIS SCREEN", CONSOLECOLORPAIR_YELLOWBLACK, 0);
                 return;
             }
 
@@ -863,11 +865,26 @@ void Game_MapObjectTakesTurn(Game *game, Map *map, MapObject *mapObject)
                         return;
                     }
 
+                    Path *path = Map_FindPath(map, mapObject->position, map->player->position, PATHFINDINGFLAG_IGNORETOPASSABLE);
                     Direction2D direction = (Direction2D){ 0, 0 };
-                    if(map->player->position.x > mapObject->position.x) direction.x = 1;
-                    if(map->player->position.x < mapObject->position.x) direction.x = -1;
-                    if(map->player->position.y > mapObject->position.y) direction.y = 1;
-                    if(map->player->position.y < mapObject->position.y) direction.y = -1;
+
+                    if(!path->complete && path->length == 0)
+                    {
+                        if(map->player->position.x > mapObject->position.x) direction.x = 1;
+                        if(map->player->position.x < mapObject->position.x) direction.x = -1;
+                        if(map->player->position.y > mapObject->position.y) direction.y = 1;
+                        if(map->player->position.y < mapObject->position.y) direction.y = -1;
+                    }
+                    else
+                    {
+                        if(path->nodes[1].x > mapObject->position.x) direction.x = 1;
+                        if(path->nodes[1].x < mapObject->position.x) direction.x = -1;
+                        if(path->nodes[1].y > mapObject->position.y) direction.y = 1;
+                        if(path->nodes[1].y < mapObject->position.y) direction.y = -1;
+                    }
+
+                    free(path);
+
                     MapObjectAction *action = MapObjectAction_Create(MAPOBJECTACTIONTYPE_MOVE);
                     action->direction = direction;
                     action->object = mapObject;
@@ -958,18 +975,18 @@ void Game_RenderUI(Game *game)
     for(int i = 0; i < max; i++)
     {
         LogMessage *lm = game->log[game->logSize - (i + 1)];
-        Console_ClearRow(game->console, 20 + i);
-        Console_Write(game->console, 20 + i, 23, lm->str, lm->colorPair, lm->attributes);
+        Console_ClearRow(game->console, 19 + i);
+        Console_Write(game->console, 19 + i, 23, lm->str, lm->colorPair, lm->attributes);
     }
 
-    Console_Write(game->console, 20, 0, game->map->player->name, CONSOLECOLORPAIR_WHITEBLACK, A_BOLD);
+    Console_Write(game->console, 19, 0, game->map->player->name, CONSOLECOLORPAIR_WHITEBLACK, A_BOLD);
     
-    Console_Write(game->console, 21, 0, "HP: [               ]", CONSOLECOLORPAIR_WHITEBLACK, 0);
-    Console_Write(game->console, 22, 0, "O2: [               ]", CONSOLECOLORPAIR_WHITEBLACK, 0);
-    Console_DrawBarW(game->console, 21, 5, 15, game->map->player->hp, game->map->player->hpMax, CONSOLECOLORPAIR_REDBLACK, 0);
-    Console_DrawBarW(game->console, 22, 5, 15, game->map->player->o2, game->map->player->o2Max, CONSOLECOLORPAIR_CYANBLACK, 0);
-    Console_WriteF(game->console, 23, 0, CONSOLECOLORPAIR_WHITEBLACK, 0, "ATT: %d (+%d)  DEF: %d   ", game->map->player->attack, game->map->player->attackToHit, game->map->player->defense);
-    Console_WriteF(game->console, 24, 0, CONSOLECOLORPAIR_WHITEBLACK, 0, "FLOOR: %d  T: %d   ", game->map->level, game->turn);
+    Console_Write(game->console, 20, 0, "HP: [               ]", CONSOLECOLORPAIR_WHITEBLACK, 0);
+    Console_Write(game->console, 21, 0, "O2: [               ]", CONSOLECOLORPAIR_WHITEBLACK, 0);
+    Console_DrawBarW(game->console, 20, 5, 15, game->map->player->hp, game->map->player->hpMax, CONSOLECOLORPAIR_REDBLACK, 0);
+    Console_DrawBarW(game->console, 21, 5, 15, game->map->player->o2, game->map->player->o2Max, CONSOLECOLORPAIR_CYANBLACK, 0);
+    Console_WriteF(game->console, 22, 0, CONSOLECOLORPAIR_WHITEBLACK, 0, "ATT: %d (+%d)  DEF: %d   ", game->map->player->attack, game->map->player->attackToHit, game->map->player->defense);
+    Console_WriteF(game->console, 23, 0, CONSOLECOLORPAIR_WHITEBLACK, 0, "FLOOR: %d  T: %d   ", game->map->level, game->turn);
 
     if(game->uiInventoryOpen)
     {
@@ -979,7 +996,7 @@ void Game_RenderUI(Game *game)
         wchar_t wchrs[6] = { L'═', L'║', L'╔', L'╗', L'╝', L'╚' };
         Console_DrawRect(game->console, rect, wchrs, CONSOLECOLORPAIR_WHITEBLACK, 0);
 
-        Console_Write(game->console, 1, 2, "Inventory: ", CONSOLECOLORPAIR_BLACKWHITE, 0);
+        Console_Write(game->console, 1, 2, " Inventory: ", CONSOLECOLORPAIR_BLACKWHITE, 0);
 
         for(int i = 0; i < 10; i++)
         {

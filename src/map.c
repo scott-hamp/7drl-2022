@@ -297,6 +297,7 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->hpMaxBase = 3;
         mapObject->o2 = 5;
         mapObject->o2MaxBase = 5;
+        mapObject->sight = 12;
         mapObject->turnTicks = 8;
         mapObject->turnTicksSize = 8;
         mapObject->wchr = L'r';
@@ -321,6 +322,7 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->hpMaxBase = 10;
         mapObject->o2 = 30;
         mapObject->o2MaxBase = 30;
+        mapObject->sight = 10;
         mapObject->turnTicks = 10;
         mapObject->turnTicksSize = 10;
         mapObject->wchr = L'@';
@@ -333,7 +335,7 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->description = "A door.";
         mapObject->layer = 2;
         mapObject->name = "door";
-        mapObject->flags |= (MAPOBJECTFLAG_CANOPEN | MAPOBJECTFLAG_BLOCKSGAS | MAPOBJECTFLAG_BLOCKSLIGHT | MAPOBJECTFLAG_BLOCKSLIQUID | MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_PLACEINDOORWAYS);
+        mapObject->flags |= (MAPOBJECTFLAG_CANOPEN | MAPOBJECTFLAG_BLOCKSGAS | MAPOBJECTFLAG_BLOCKSLIGHT | MAPOBJECTFLAG_BLOCKSLIQUID | MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_PLACEINDOORWAYS | MAPOBJECTFLAG_RENDERALWAYSAFTERSEEN);
         mapObject->wchr = L'+';
         mapObject->wchrAlt = L'`';
     }
@@ -408,6 +410,7 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->hpMaxBase = 4;
         mapObject->o2 = 8;
         mapObject->o2MaxBase = 8;
+        mapObject->sight = 15;
         mapObject->turnTicks = 10;
         mapObject->turnTicksSize = 10;
         mapObject->wchr = L'd';
@@ -458,6 +461,7 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->flags |= (MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_CANATTACK | MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_ISAQUATIC | MAPOBJECTFLAG_ISHOSTILE | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLACEINWATER);
         mapObject->hp = 3;
         mapObject->hpMaxBase = 3;
+        mapObject->sight = 10;
         mapObject->turnTicks = 9;
         mapObject->turnTicksSize = 9;
         mapObject->wchr = L'e';
@@ -480,6 +484,7 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->flags |= (MAPOBJECTFLAG_BLOCKSSOLID | MAPOBJECTFLAG_CANATTACK | MAPOBJECTFLAG_CANMOVE | MAPOBJECTFLAG_ISAQUATIC | MAPOBJECTFLAG_ISHOSTILE | MAPOBJECTFLAG_ISLIVING | MAPOBJECTFLAG_PLACEINWATER);
         mapObject->hp = 5;
         mapObject->hpMaxBase = 5;
+        mapObject->sight = 10;
         mapObject->turnTicks = 12;
         mapObject->turnTicksSize = 12;
         mapObject->wchr = L'f';
@@ -518,7 +523,7 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->description = "Stairs.";
         mapObject->layer = 2;
         mapObject->name = "stairs";
-        mapObject->flags |= (MAPOBJECTFLAG_PLACEINROOM | MAPOBJECTFLAG_STAIRS);
+        mapObject->flags |= (MAPOBJECTFLAG_PLACEINROOM | MAPOBJECTFLAG_RENDERALWAYSAFTERSEEN | MAPOBJECTFLAG_STAIRS);
         mapObject->wchr = L'<';
         mapObject->wchrAlt = L'<';
     }
@@ -541,6 +546,112 @@ void Map_Destroy(Map *map)
     for(int i = 0; i < map->size.width * map->size.height; i++)
         MapTile_Destroy(map->tiles[i]);
     free(map->tiles);
+}
+
+Path *Map_FindPath(Map *map, Point2D from, Point2D to, uint8_t flags)
+{
+    Path *path = malloc(sizeof(Path));
+    path->complete = false;
+    path->length = 0;
+
+    if(Map_GetTile(map, from) == NULL || Map_GetTile(map, to) == NULL)
+        return path;
+    if(from.x == to.x && from.y == to.y) return path;
+
+    Direction2D directions[8];
+    directions[0] = (Direction2D){ 0, -1 };
+    directions[1] = (Direction2D){ 1, -1 };
+    directions[2] = (Direction2D){ 1, 0 };
+    directions[3] = (Direction2D){ 1, 1 };
+    directions[4] = (Direction2D){ 0, 1 };
+    directions[5] = (Direction2D){ -1, 1 };
+    directions[6] = (Direction2D){ -1, 0 };
+    directions[7] = (Direction2D){ -1, -1 };
+
+    int timeout = 1000;
+    while((from.x != to.x || from.y != to.y) && timeout > 0)
+    {
+        timeout--;
+
+        path->nodes[path->length] = from;
+        path->length++;
+        if(path->length == 1000) return path;
+
+        int directionIndex = -1;
+        if(from.x == to.x && from.y > to.y) directionIndex = 0;
+        if(from.x < to.x && from.y > to.y) directionIndex = 1;
+        if(from.x < to.x && from.y == to.y) directionIndex = 2;
+        if(from.x < to.x && from.y < to.y) directionIndex = 3;
+        if(from.x == to.x && from.y < to.y) directionIndex = 4;
+        if(from.x > to.x && from.y < to.y) directionIndex = 5;
+        if(from.x > to.x && from.y == to.y) directionIndex = 6;
+        if(from.x > to.x && from.y > to.y) directionIndex = 7;
+
+        if(directionIndex == -1) return path;
+
+        int directionIndices[2];
+        directionIndices[0] = directionIndex;
+        directionIndices[1] = directionIndex;
+        Point2D nexts[2];
+        nexts[0] = (Point2D){ -1, -1 };
+        nexts[1] = (Point2D){ -1, -1 };
+        int attemps[2];
+        attemps[0] = 0;
+        attemps[1] = 0;
+
+        for(int i = 0; i < 2; i++)
+        {
+            for(int j = 0; j < 8; j++)
+            {
+                attemps[i]++;
+                nexts[i] = (Point2D){ from.x + directions[directionIndices[i]].x, from.y + directions[directionIndices[i]].y };
+                bool pass = true;
+
+                if(Path_Find(path, nexts[i]) > -1) 
+                    pass = false;
+                else
+                {
+                    MapTile *tile = Map_GetTile(map, nexts[i]);
+                    if(tile == NULL)
+                        pass = false;
+                    else
+                    {
+                        if(!(tile->passable & MAPTILEPASSABLE_SOLID))
+                        {
+                            if(!(nexts[i].x == to.x && nexts[i].y == to.y && (flags & PATHFINDINGFLAG_IGNORETOPASSABLE)))
+                                pass = false;
+                        }
+                    }
+                }
+
+                if(pass) break;
+
+                directionIndices[i] += (i == 0) ? 1 : -1;
+                if(directionIndices[i] > 7) directionIndices[i] = 0;
+                if(directionIndices[i] < 0) directionIndices[i] = 7;
+                nexts[i] = (Point2D){ -1, -1 };
+            }
+        }
+
+        if(nexts[0].x == -1 && nexts[1].x == -1) return path;
+        if(nexts[0].x == -1)
+            from = nexts[1];
+        else
+        {
+            if(nexts[1].x == -1)
+                from = nexts[0];
+            else
+            {
+                if(attemps[0] <= attemps[1])
+                    from = nexts[0];
+                else
+                    from = nexts[1];
+            }
+        }
+    }
+
+    path->complete = true;
+    return path;
 }
 
 bool Map_LevelFloodTimerTick(Map *map)
@@ -581,196 +692,222 @@ void Map_Generate(Map *map)
 
     while(true)
     {
-        for(int y = 0; y < map->size.height; y++)
-        {
-            for(int x = 0; x < map->size.width; x++)
-            {
-                MapTile *tile = map->tiles[(y * map->size.width) + x];
-                MapTile_SetType(tile, MAPTILETYPE_WALL);
-                MapTile_DestroyObjects(tile);
-            }
-        }
+        bool generateEssentialComplete = false;
+        int timeout = 1000;
 
         while(true)
         {
-            for(int i = 0; i < map->roomsCount; i++)
-                free(map->rooms[i]);
-            map->roomsCount = 0;
-
-            Point2D divisions = (Point2D){ 3, 2 };
-
-            for(int y = 1; y < map->size.height - 1; y += map->size.height / divisions.y)
+            for(int y = 0; y < map->size.height; y++)
             {
-                for(int x = 1; x < map->size.width - 1; x += map->size.width / divisions.x)
+                for(int x = 0; x < map->size.width; x++)
                 {
-                    if(rand() % 100 >= 80) continue;
-
-                    map->rooms[map->roomsCount] = malloc(sizeof(Rect2D));
-                    map->rooms[map->roomsCount]->position = (Point2D){ x, y };
-                    map->rooms[map->roomsCount]->size = (Size2D){ (map->size.width / divisions.x) - 1, (map->size.height / divisions.y) - 1 };
-                    map->roomsCount++;
+                    MapTile *tile = map->tiles[(y * map->size.width) + x];
+                    MapTile_SetType(tile, MAPTILETYPE_WALL);
+                    MapTile_DestroyObjects(tile);
                 }
             }
 
-            if(map->roomsCount >= 4 && map->roomsCount < 6) break;
+            while(true)
+            {
+                for(int i = 0; i < map->roomsCount; i++)
+                    free(map->rooms[i]);
+                map->roomsCount = 0;
+
+                Point2D divisions = (Point2D){ 3, 2 };
+
+                for(int y = 1; y < map->size.height - 1; y += map->size.height / divisions.y)
+                {
+                    for(int x = 1; x < map->size.width - 1; x += map->size.width / divisions.x)
+                    {
+                        if(rand() % 100 >= 80) continue;
+
+                        map->rooms[map->roomsCount] = malloc(sizeof(Rect2D));
+                        map->rooms[map->roomsCount]->position = (Point2D){ x, y };
+                        map->rooms[map->roomsCount]->size = (Size2D){ (map->size.width / divisions.x) - 1, (map->size.height / divisions.y) - 1 };
+                        map->roomsCount++;
+                    }
+                }
+
+                if(map->roomsCount >= 4 && map->roomsCount < 6) break;
+            }
+
+            for(int i = 0; i < map->roomsCount; i++)
+            {
+                Point2D offset = (Point2D){ 1 + rand() % 3, 1 + rand() % 3 };
+                map->rooms[i]->position.x += offset.x;
+                map->rooms[i]->position.y += offset.y;
+                map->rooms[i]->size.width -= ((offset.x * 2) + rand() % 2);
+                map->rooms[i]->size.height -= ((offset.y * 2) + rand() % 2);
+
+                if(rand() % 10 >= 2)
+                {
+                    map->rooms[i]->size.width /= 1.5;
+                    map->rooms[i]->size.height /= 1.3;
+                }
+                else
+                {
+                    if(rand() % 10 >= 8)
+                    {
+                        map->rooms[i]->size.width = 3 + rand() % 2;
+                        map->rooms[i]->size.height = 3 + rand() % 2;
+                    }
+                }
+
+                while(map->rooms[i]->position.y + map->rooms[i]->size.width > map->size.width - 2)
+                    map->rooms[i]->size.width--;
+                while(map->rooms[i]->position.y + map->rooms[i]->size.height > map->size.height - 2)
+                    map->rooms[i]->size.height--;
+                if(map->rooms[i]->size.width < 3) map->rooms[i]->size.width = 3;
+                if(map->rooms[i]->size.height < 3) map->rooms[i]->size.height = 3;
+            }
+
+            bool toContinue = false;
+            for(int i = 0; i < map->roomsCount; i++)
+            {
+                Rect2D *room = map->rooms[i];
+                if(room->position.x < 3 || room->position.y < 3 || room->position.x + room->size.width >= map->size.width - 3 || room->position.y + room->size.height >= map->size.height - 3)
+                {
+                    toContinue = true;
+                    break;
+                }
+            }
+
+            if(!toContinue) break;
         }
 
         for(int i = 0; i < map->roomsCount; i++)
         {
-            Point2D offset = (Point2D){ 1 + rand() % 3, 1 + rand() % 3 };
-            map->rooms[i]->position.x += offset.x;
-            map->rooms[i]->position.y += offset.y;
-            map->rooms[i]->size.width -= ((offset.x * 2) + rand() % 2);
-            map->rooms[i]->size.height -= ((offset.y * 2) + rand() % 2);
-
-            if(rand() % 10 >= 2)
+            for(int y = 0; y < map->rooms[i]->size.height; y++)
             {
-                map->rooms[i]->size.width /= 1.5;
-                map->rooms[i]->size.height /= 1.3;
+                for(int x = 0; x < map->rooms[i]->size.width; x++)
+                {
+                    Point2D point = (Point2D){ map->rooms[i]->position.x + x, map->rooms[i]->position.y + y };
+                    if(point.x < 1 || point.y < 1 || point.x >= map->size.width - 1 || point.y >= map->size.height - 1) 
+                        continue;
+                    MapTile_SetType(Map_GetTile(map, point), MAPTILETYPE_FLOOR);
+                }
             }
-            else
+        }
+
+        bool roomConnected[25];
+        for(int i = 0; i < map->roomsCount; i++) roomConnected[i] = false;
+
+        while(timeout > 0)
+        {
+            timeout--;
+
+            int atRoomIndex = rand() % map->roomsCount;
+            while(roomConnected[atRoomIndex])
             {
+                atRoomIndex++;
+                if(atRoomIndex >= map->roomsCount) atRoomIndex = 0;
+            }
+            int toRoomIndex = rand() % map->roomsCount;
+            while(atRoomIndex == toRoomIndex) toRoomIndex = rand() % map->roomsCount;
+            Point2D at, to;
+
+            roomConnected[atRoomIndex] = true;
+            at = (Point2D){ map->rooms[atRoomIndex]->position.x + map->rooms[atRoomIndex]->size.width / 2, map->rooms[atRoomIndex]->position.y + map->rooms[atRoomIndex]->size.height / 2 };
+            to = (Point2D){ map->rooms[toRoomIndex]->position.x + map->rooms[toRoomIndex]->size.width / 2, map->rooms[toRoomIndex]->position.y + map->rooms[toRoomIndex]->size.height / 2 };
+
+            while(at.x != to.x || at.y != to.y)
+            {
+                if(Map_GetRoomIndexContaining(map, at) == toRoomIndex && map->tiles[(at.y * map->size.width) + at.x]->type == MAPTILETYPE_FLOOR)
+                    break;
+
+                if(at.x > 0 && at.y > 0 && at.x < map->size.width - 1 && at.y < map->size.height - 1)
+                    MapTile_SetType(map->tiles[(at.y * map->size.width) + at.x], MAPTILETYPE_FLOOR);
+
+                /*
                 if(rand() % 10 >= 8)
                 {
-                    map->rooms[i]->size.width = 3 + rand() % 2;
-                    map->rooms[i]->size.height = 3 + rand() % 2;
+                    if(rand() % 10 >= 3)
+                        at.x += -1 + rand() % 2;
+                    else
+                        at.y += -1 + rand() % 2;
                 }
-            }
-
-            while(map->rooms[i]->position.y + map->rooms[i]->size.width > map->size.width - 2)
-                map->rooms[i]->size.width--;
-            while(map->rooms[i]->position.y + map->rooms[i]->size.height > map->size.height - 2)
-                map->rooms[i]->size.height--;
-            if(map->rooms[i]->size.width < 3) map->rooms[i]->size.width = 3;
-            if(map->rooms[i]->size.height < 3) map->rooms[i]->size.height = 3;
-        }
-
-        bool toContinue = false;
-        for(int i = 0; i < map->roomsCount; i++)
-        {
-            Rect2D *room = map->rooms[i];
-            if(room->position.x < 3 || room->position.y < 3 || room->position.x + room->size.width >= map->size.width - 3 || room->position.y + room->size.height >= map->size.height - 3)
-            {
-                toContinue = true;
-                break;
-            }
-        }
-
-        if(!toContinue) break;
-    }
-
-    for(int i = 0; i < map->roomsCount; i++)
-    {
-        for(int y = 0; y < map->rooms[i]->size.height; y++)
-        {
-            for(int x = 0; x < map->rooms[i]->size.width; x++)
-            {
-                Point2D point = (Point2D){ map->rooms[i]->position.x + x, map->rooms[i]->position.y + y };
-                if(point.x < 1 || point.y < 1 || point.x >= map->size.width - 1 || point.y >= map->size.height - 1) 
-                    continue;
-                MapTile_SetType(Map_GetTile(map, point), MAPTILETYPE_FLOOR);
-            }
-        }
-    }
-
-    bool roomConnected[25];
-    for(int i = 0; i < map->roomsCount; i++) roomConnected[i] = false;
-    int timeout = 1000;
-
-    while(timeout > 0)
-    {
-        timeout--;
-
-        int atRoomIndex = rand() % map->roomsCount;
-        while(roomConnected[atRoomIndex])
-        {
-            atRoomIndex++;
-            if(atRoomIndex >= map->roomsCount) atRoomIndex = 0;
-        }
-        int toRoomIndex = rand() % map->roomsCount;
-        while(atRoomIndex == toRoomIndex) toRoomIndex = rand() % map->roomsCount;
-        Point2D at, to;
-
-        roomConnected[atRoomIndex] = true;
-        at = (Point2D){ map->rooms[atRoomIndex]->position.x + map->rooms[atRoomIndex]->size.width / 2, map->rooms[atRoomIndex]->position.y + map->rooms[atRoomIndex]->size.height / 2 };
-        to = (Point2D){ map->rooms[toRoomIndex]->position.x + map->rooms[toRoomIndex]->size.width / 2, map->rooms[toRoomIndex]->position.y + map->rooms[toRoomIndex]->size.height / 2 };
-
-        while(at.x != to.x || at.y != to.y)
-        {
-            if(Map_GetRoomIndexContaining(map, at) == toRoomIndex && map->tiles[(at.y * map->size.width) + at.x]->type == MAPTILETYPE_FLOOR)
-                break;
-
-            if(at.x > 0 && at.y > 0 && at.x < map->size.width - 1 && at.y < map->size.height - 1)
-                MapTile_SetType(map->tiles[(at.y * map->size.width) + at.x], MAPTILETYPE_FLOOR);
-
-            /*
-            if(rand() % 10 >= 8)
-            {
-                if(rand() % 10 >= 3)
-                    at.x += -1 + rand() % 2;
                 else
-                    at.y += -1 + rand() % 2;
-            }
-            else
-            {
-                if(to.x > at.x) at.x++;
-                if(to.x < at.x) at.x--;
-                if(to.y > at.y) at.y++;
-                if(to.y < at.y) at.y--;
-            }
-            */
-
-            if(at.x == to.x)
-            {
-                if(to.y > at.y) at.y++;
-                if(to.y < at.y) at.y--;
-            }
-            else
-            {
-                if(at.x == to.x)
                 {
                     if(to.x > at.x) at.x++;
                     if(to.x < at.x) at.x--;
+                    if(to.y > at.y) at.y++;
+                    if(to.y < at.y) at.y--;
+                }
+                */
+
+                if(at.x == to.x)
+                {
+                    if(to.y > at.y) at.y++;
+                    if(to.y < at.y) at.y--;
                 }
                 else
                 {
-                    if(rand() % 10 >= 5)
+                    if(at.x == to.x)
                     {
                         if(to.x > at.x) at.x++;
                         if(to.x < at.x) at.x--;
                     }
                     else
                     {
-                        if(to.y > at.y) at.y++;
-                        if(to.y < at.y) at.y--;
+                        if(rand() % 10 >= 5)
+                        {
+                            if(to.x > at.x) at.x++;
+                            if(to.x < at.x) at.x--;
+                        }
+                        else
+                        {
+                            if(to.y > at.y) at.y++;
+                            if(to.y < at.y) at.y--;
+                        }
                     }
                 }
             }
+
+            bool toBreak = true;
+            for(int i = 0; i < map->roomsCount; i++)
+            {
+                if(!roomConnected[i])
+                {
+                    toBreak = false;
+                    break;
+                }
+            }
+
+            if(toBreak) break;
         }
 
-        bool toBreak = true;
-        for(int i = 0; i < map->roomsCount; i++)
+        if(map->player == NULL)
         {
-            if(!roomConnected[i])
+            map->player = Map_CreateObject(map, MAPOBJECTID_PLAYER);
+            Map_PlaceObject(map, map->player);
+        }
+
+        for(int i = 0; i < 4 + rand() % 2; i++)
+            Map_PlaceObject(map, Map_CreateObject(map, MAPOBJECTID_DOOR));
+
+        MapObject *stairs = Map_CreateObject(map, MAPOBJECTID_STAIRS);
+        Map_PlaceObject(map, stairs);
+
+        while(timeout > 0)
+        {
+            timeout--;
+
+            Path *path = Map_FindPath(map, map->player->position, stairs->position, 0);
+
+            if(path->complete)
             {
-                toBreak = false;
+                generateEssentialComplete = true;
+                free(path);
                 break;
             }
+
+            free(path);
+            MapTile_RemoveObject(Map_GetTile(map, stairs->position), stairs);
+            Map_PlaceObject(map, stairs);
         }
 
-        if(toBreak) break;
+        if(generateEssentialComplete) break;
     }
-
-    if(map->player == NULL)
-    {
-        map->player = Map_CreateObject(map, MAPOBJECTID_PLAYER);
-        Map_PlaceObject(map, map->player);
-    }
-
-    for(int i = 0; i < 4 + rand() % 2; i++)
-        Map_PlaceObject(map, Map_CreateObject(map, MAPOBJECTID_DOOR));
-
-    Map_PlaceObject(map, Map_CreateObject(map, MAPOBJECTID_STAIRS));
 
     int monsterIDs[10];
     monsterIDs[0] = MAPOBJECTID_BILGERAT;
@@ -930,6 +1067,31 @@ wchar_t Map_GetPointWChr(Map *map, Point2D point)
     return L' ';
 }
 
+wchar_t Map_GetPointWChrObjectFlags(Map *map, Point2D point, uint32_t flags)
+{
+    MapTile *tile = Map_GetTile(map, point);
+    if(tile == NULL) return L' ';
+
+    if((int)tile->objectsCount == 0)
+        return Map_GetPointWChr(map, point);
+
+    wchar_t wchr = L' ';
+    int layer = 1000;
+
+    for(int i = 0; i < (int)tile->objectsCount; i++)
+    {
+        MapObject *obj = tile->objects[i];
+
+        if(!(obj->flags & flags)) continue;
+        if(obj->layer >= layer) continue;
+
+        wchr = obj->wchr;
+        layer = obj->layer;
+    }
+
+    return wchr;
+}
+
 int Map_GetRoomIndexContaining(Map *map, Point2D point)
 {
     for(int i = 0; i < map->roomsCount; i++)
@@ -1016,6 +1178,7 @@ MapObjectAction *Map_ObjectAttemptActionAsTarget(Map *map, MapObject *mapObject,
 
 void Map_PlaceObject(Map *map, MapObject *mapObject)
 {
+    mapObject->position = (Point2D){ -1, -1 };
     int timeout = 1000;
 
     while(timeout > 0)
@@ -1156,7 +1319,16 @@ void Map_RenderRect(Map *map, MapObject *viewer, Console *console, Rect2D rect)
                     if(view == MAPOBJECTVIEW_SEEN)
                     {
                         if(tile->type == MAPTILETYPE_FLOOR)
-                            wchr = (Map_GetRoomIndexContaining(map, mapPoint) > -1) ? L' ' : L'░';
+                        {
+                            if((int)tile->objectsCount > 0)
+                            {
+                                wchr = Map_GetPointWChrObjectFlags(map, mapPoint, MAPOBJECTFLAG_RENDERALWAYSAFTERSEEN);
+                                if(wchr == L' ')
+                                    wchr = (Map_GetRoomIndexContaining(map, mapPoint) > -1) ? L' ' : L'░';
+                            }
+                            else
+                               wchr = (Map_GetRoomIndexContaining(map, mapPoint) > -1) ? L' ' : L'░'; 
+                        }
                         if(tile->type == MAPTILETYPE_WALL)
                             wchr = Map_GetPointWChr(map, mapPoint);
                     }
@@ -1191,7 +1363,7 @@ void Map_UpdateObjectView(Map* map, MapObject *mapObject)
 
     // CRUDE RAYCASTING SOLUTION:
 
-    int viewLength = 20;
+    int viewLength = mapObject->sight * 2;
 
     for(int d = 0; d < 360; d++)
     {
@@ -1293,6 +1465,7 @@ MapObject *MapObject_Create(const char *name)
     mapObject->o2 = 0;
     mapObject->o2Max = 0;
     mapObject->o2MaxBase = 0;
+    mapObject->sight = 0;
     mapObject->turnTicks = 0;
     mapObject->turnTicksSize = 0;
     mapObject->wchr = L' ';
@@ -1488,6 +1661,7 @@ void MapObjectAsItem_Destroy(MapObjectAsItem *item)
 
 void MapTile_AddObject(MapTile *tile, MapObject *mapObject)
 {
+    if(tile == NULL) return;
     if(tile->objectsCount == 10) return;
 
     for(int i = (int)tile->objectsCount; i > 0; i--)
@@ -1553,6 +1727,8 @@ bool MapTile_HasObject(MapTile *tile, MapObject *mapObject)
 
 void MapTile_RemoveObject(MapTile *tile, MapObject *mapObject)
 {
+    if(tile == NULL) return;
+
     for(int i = 0; i <= tile->objectsCount; i++)
     {
         if(tile->objects[i] != mapObject) continue;
@@ -1595,4 +1771,15 @@ void MapTile_UpdatePassable(MapTile *tile)
         tile->passable &= ~MAPTILEPASSABLE_LIQUID;
     if(mapObject->flags & MAPOBJECTFLAG_BLOCKSSOLID)
         tile->passable &= ~MAPTILEPASSABLE_SOLID;
+}
+
+int Path_Find(Path *path, Point2D point)
+{
+    for(int i = 0; i < (int)path->length; i++)
+    {
+        if(path->nodes[i].x == point.x && path->nodes[i].y == point.y)
+            return i;
+    }
+
+    return -1;
 }

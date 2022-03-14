@@ -17,31 +17,32 @@
 #define MAPOBJECTEQUIPAT_FACE           2
 #define MAPOBJECTEQUIPAT_WEAPON         3
 
-#define MAPOBJECTFLAG_BLOCKSGAS             1 << 0
-#define MAPOBJECTFLAG_BLOCKSLIGHT           1 << 1
-#define MAPOBJECTFLAG_BLOCKSLIQUID          1 << 2
-#define MAPOBJECTFLAG_BLOCKSSOLID           1 << 3
-#define MAPOBJECTFLAG_CANATTACK             1 << 4
-#define MAPOBJECTFLAG_CANMOVE               1 << 5
-#define MAPOBJECTFLAG_CANOPEN               1 << 6
-#define MAPOBJECTFLAG_CANOPENOTHER          1 << 7
-#define MAPOBJECTFLAG_HASINVENTORY          1 << 8
-#define MAPOBJECTFLAG_ISAQUATIC             1 << 9
-#define MAPOBJECTFLAG_ISEQUIPMENT           1 << 10
-#define MAPOBJECTFLAG_ISHOSTILE             1 << 11
-#define MAPOBJECTFLAG_ISITEM                1 << 12
-#define MAPOBJECTFLAG_ISLIQUID              1 << 13
-#define MAPOBJECTFLAG_ISLIQUIDSOURCE        1 << 14
-#define MAPOBJECTFLAG_ISLIVING              1 << 15
-#define MAPOBJECTFLAG_ISOPEN                1 << 16
-#define MAPOBJECTFLAG_ITEMINCREASE02        1 << 17
-#define MAPOBJECTFLAG_ITEMISRANGED          1 << 18
-#define MAPOBJECTFLAG_ITEMSUPPLY02          1 << 19
-#define MAPOBJECTFLAG_PLACEINDOORWAYS       1 << 20
-#define MAPOBJECTFLAG_PLACEINROOM           1 << 21
-#define MAPOBJECTFLAG_PLACEINWATER          1 << 22
-#define MAPOBJECTFLAG_PLAYER                1 << 23
-#define MAPOBJECTFLAG_STAIRS                1 << 24
+#define MAPOBJECTFLAG_BLOCKSGAS                 1 << 0
+#define MAPOBJECTFLAG_BLOCKSLIGHT               1 << 1
+#define MAPOBJECTFLAG_BLOCKSLIQUID              1 << 2
+#define MAPOBJECTFLAG_BLOCKSSOLID               1 << 3
+#define MAPOBJECTFLAG_CANATTACK                 1 << 4
+#define MAPOBJECTFLAG_CANMOVE                   1 << 5
+#define MAPOBJECTFLAG_CANOPEN                   1 << 6
+#define MAPOBJECTFLAG_CANOPENOTHER              1 << 7
+#define MAPOBJECTFLAG_HASINVENTORY              1 << 8
+#define MAPOBJECTFLAG_ISAQUATIC                 1 << 9
+#define MAPOBJECTFLAG_ISEQUIPMENT               1 << 10
+#define MAPOBJECTFLAG_ISHOSTILE                 1 << 11
+#define MAPOBJECTFLAG_ISITEM                    1 << 12
+#define MAPOBJECTFLAG_ISLIQUID                  1 << 13
+#define MAPOBJECTFLAG_ISLIQUIDSOURCE            1 << 14
+#define MAPOBJECTFLAG_ISLIVING                  1 << 15
+#define MAPOBJECTFLAG_ISOPEN                    1 << 16
+#define MAPOBJECTFLAG_ITEMINCREASE02            1 << 17
+#define MAPOBJECTFLAG_ITEMISRANGED              1 << 18
+#define MAPOBJECTFLAG_ITEMSUPPLY02              1 << 19
+#define MAPOBJECTFLAG_PLACEINDOORWAYS           1 << 20
+#define MAPOBJECTFLAG_PLACEINROOM               1 << 21
+#define MAPOBJECTFLAG_PLACEINWATER              1 << 22
+#define MAPOBJECTFLAG_PLAYER                    1 << 23
+#define MAPOBJECTFLAG_RENDERALWAYSAFTERSEEN     1 << 24
+#define MAPOBJECTFLAG_STAIRS                    1 << 25
 
 #define MAPOBJECTID_PLAYER          0
 #define MAPOBJECTID_BILGERAT        1
@@ -71,6 +72,8 @@
 #define MAPTILETYPE_EMPTY           0
 #define MAPTILETYPE_FLOOR           1
 #define MAPTILETYPE_WALL            2
+
+#define PATHFINDINGFLAG_IGNORETOPASSABLE        1 << 0
 
 typedef struct MapObjectAsItem
 {
@@ -113,6 +116,7 @@ typedef struct MapObject
     Point2D position;
     MapObjectAsItem *items[10];
     size_t itemsCount;
+    int sight;
     int turnTicks;
     size_t turnTicksSize;
     int *view;
@@ -154,17 +158,26 @@ typedef struct Map
     MapTile **tiles;
 } Map;
 
+typedef struct Path
+{
+    bool complete;
+    size_t length;
+    Point2D nodes[1000];
+} Path;
+
 MapObjectAction *Map_AttemptObjectAction(Map *map, MapObjectAction *action);
 void Map_Clear(Map *map);
 Map *Map_Create(Size2D size, Point2D renderOffset);
 MapObject *Map_CreateObject(Map *map, uint16_t id);
 void Map_Destroy(Map *map);
+Path *Map_FindPath(Map *map, Point2D from, Point2D to, uint8_t flags);
 void Map_Generate(Map *map);
 MapObject *Map_GetClosestObjectWithFlags(Map *map, Point2D to, uint32_t flags);
 int Map_GetObjectView(Map *map, MapObject *mapObject, Point2D point);
 int Map_GetPointColorPair(Map *map, Point2D point);
 char *Map_GetPointDescription(Map *map, Point2D point);
 wchar_t Map_GetPointWChr(Map *map, Point2D point);
+wchar_t Map_GetPointWChrObjectFlags(Map *map, Point2D point, uint32_t flags);
 int Map_GetRoomIndexContaining(Map *map, Point2D point);
 int Map_GetRoomIndexContainingBorder(Map *map, Point2D point, int border);
 int Map_GetSimpleDistance(Map *map, Point2D from, Point2D to);
@@ -201,5 +214,6 @@ MapObject *MapTile_GetObjectWithFlags(MapTile *tile, uint32_t flags);
 bool MapTile_HasObject(MapTile *tile, MapObject *mapObject);
 void MapTile_SetType(MapTile *tile, int type);
 void MapTile_UpdatePassable(MapTile *tile);
+int Path_Find(Path *path, Point2D point);
 
 #endif
