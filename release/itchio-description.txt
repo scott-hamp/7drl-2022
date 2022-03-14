@@ -1,5 +1,13 @@
 This game is a traditional roguelike created for the 2022 Seven Day Roguelike. You're stuck on a sinking ship, and must quickly ascend to the next floor before water floods the area, while making sure to grab items to help you survive.
 
-For the Windows version I'd recommended using the terminal from the Microsoft store, as this gives you complete control over the font, colors, etc. I've included my favorite roguelike font, JetBrains Mono, if you want to try the game with it. The Linux versions requires ncursesw.
+For the Windows version I'd recommended using the terminal from the Microsoft store, as this gives you complete control over the font, colors, etc. I've included my favorite roguelike font, JetBrains Mono, if you want to try the game with it. The Linux version requires ncursesw.
+
+The game is coded in C. 
+
+Libraries / tools used: 
+
+ncursesw
+VS Code
+GIMP
 
 If you have any feedback or encounter any bugs, please feel free to let me know. Thanks for playing!
