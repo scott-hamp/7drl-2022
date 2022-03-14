@@ -1277,20 +1277,22 @@ MapObject *MapObject_Create(const char *name)
     mapObject->description = "Nothing.";
     mapObject->details = "";
     mapObject->equipAt = -1;
+    for(int i = 0; i < 2; i++)
+        mapObject->equipment[i] = NULL;
+    mapObject->flags = 0;
     mapObject->hp = 0;
     mapObject->hpMax = 0;
     mapObject->hpMaxBase = 0;
     mapObject->hpRecoverTimer = 0;
     mapObject->hpRecoverTimerLength = 0;
+    for(int i = 0; i < 10; i++)
+        mapObject->items[i] = NULL;
+    mapObject->itemsCount = 0;
     mapObject->lastRoomIndex = -1;
     mapObject->name = name;
     mapObject->o2 = 0;
     mapObject->o2Max = 0;
     mapObject->o2MaxBase = 0;
-    for(int i = 0; i < 2; i++)
-        mapObject->equipment[i] = NULL;
-    mapObject->flags = 0;
-    mapObject->itemsCount = 0;
     mapObject->turnTicks = 0;
     mapObject->turnTicksSize = 0;
     mapObject->wchr = L' ';
@@ -1300,10 +1302,15 @@ MapObject *MapObject_Create(const char *name)
 
 void MapObject_Destroy(MapObject *mapObject)
 {
-    for(int i = 0; i < mapObject->itemsCount; i++)
-        MapObjectAsItem_Destroy(mapObject->items[i]);
+    if(mapObject->flags & MAPOBJECTFLAG_HASINVENTORY)
+    {
+        for(int i = 0; i < (int)mapObject->itemsCount; i++)
+            MapObjectAsItem_Destroy(mapObject->items[i]);
+    }
+
     if(mapObject->view != NULL)
         free(mapObject->view);
+
     free(mapObject);
 }
 
