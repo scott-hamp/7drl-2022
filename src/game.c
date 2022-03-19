@@ -30,15 +30,16 @@ Game *Game_Create(Console *console)
     Console_Write(game->console, 10, 0, "                            Controls: ", 0, 0);
     Console_Write(game->console, 11, 0, " Movement:     vi keys / numpad keys / arrow keys", 0, 0);
     Console_Write(game->console, 12, 0, " Commands: ", 0, 0);
-    Console_Write(game->console, 13, 0, " - Drop:                               d", 0, 0);
-    Console_Write(game->console, 14, 0, " - Fire:                               f", 0, 0);
-    Console_Write(game->console, 15, 0, " - Look:                               x", 0, 0);
-    Console_Write(game->console, 16, 0, " - Open / close:                       o", 0, 0);
-    Console_Write(game->console, 17, 0, " - Pick up:                            g / ,", 0, 0);
-    Console_Write(game->console, 18, 0, " - View help:                          ?", 0, 0);
-    Console_Write(game->console, 19, 0, " - View inventory:                     i", 0, 0);
-    Console_Write(game->console, 20, 0, " - Wait:                               . / Numpad 5", 0, 0);
-    Console_Write(game->console, 21, 0, " - Wield / wear / remove / put away:   w", 0, 0);
+    Console_Write(game->console, 13, 0, " - Ascend stairs:                      <", 0, 0);
+    Console_Write(game->console, 14, 0, " - Drop:                               d", 0, 0);
+    Console_Write(game->console, 15, 0, " - Fire:                               f", 0, 0);
+    Console_Write(game->console, 16, 0, " - Look:                               x", 0, 0);
+    Console_Write(game->console, 17, 0, " - Open / close:                       o", 0, 0);
+    Console_Write(game->console, 18, 0, " - Pick up:                            g / ,", 0, 0);
+    Console_Write(game->console, 19, 0, " - View help:                          ?", 0, 0);
+    Console_Write(game->console, 20, 0, " - View inventory:                     i", 0, 0);
+    Console_Write(game->console, 21, 0, " - Wait:                               . / Numpad 5", 0, 0);
+    Console_Write(game->console, 22, 0, " - Wield / wear / remove / put away:   w", 0, 0);
 
     Console_Write(game->console, 23, 0, "                    PRESS ANY KEY TO START!", CONSOLECOLORPAIR_YELLOWBLACK, 0);
 
@@ -479,7 +480,7 @@ void Game_HandleInput(Game *game)
                 return;
             }
 
-            // 'g' / ',' == Get
+            // 'g' / ',' == Get / pick up
 
             if(game->key == 44 || game->key == 103)
             {
@@ -586,17 +587,18 @@ void Game_HandleInput(Game *game)
                 Console_Write(game->console, 8, 0, "                   Controls: ", 0, 0);
                 Console_Write(game->console, 9, 0, " Movement:   vi keys / numpad keys / arrow keys", 0, 0);
                 Console_Write(game->console, 10, 0, " Commands:", 0, 0);
-                Console_Write(game->console, 11, 0, " - Drop:                                d", 0, 0);
-                Console_Write(game->console, 12, 0, " - Fire:                                f", 0, 0);
-                Console_Write(game->console, 13, 0, " - Look:                               x", 0, 0);
-                Console_Write(game->console, 14, 0, " - Open / close:                       o", 0, 0);
-                Console_Write(game->console, 15, 0, " - Pick up:                            g / ,", 0, 0);
-                Console_Write(game->console, 16, 0, " - View help:                          ?", 0, 0);
-                Console_Write(game->console, 17, 0, " - View inventory:                     i", 0, 0);
-                Console_Write(game->console, 18, 0, " - Wait:                               . / Numpad 5", 0, 0);
-                Console_Write(game->console, 19, 0, " - Wield / wear / remove / put away:   w", 0, 0);
+                Console_Write(game->console, 11, 0, " - Ascend stairs:                      <", 0, 0);
+                Console_Write(game->console, 12, 0, " - Drop:                               d", 0, 0);
+                Console_Write(game->console, 13, 0, " - Fire:                               f", 0, 0);
+                Console_Write(game->console, 14, 0, " - Look:                               x", 0, 0);
+                Console_Write(game->console, 15, 0, " - Open / close:                       o", 0, 0);
+                Console_Write(game->console, 16, 0, " - Pick up:                            g / ,", 0, 0);
+                Console_Write(game->console, 17, 0, " - View help:                          ?", 0, 0);
+                Console_Write(game->console, 18, 0, " - View inventory:                     i", 0, 0);
+                Console_Write(game->console, 19, 0, " - Wait:                               . / Numpad 5", 0, 0);
+                Console_Write(game->console, 20, 0, " - Wield / wear / remove / put away:   w", 0, 0);
 
-                Console_Write(game->console, 22, 0, " PRESS ESC. TO CLOSE THIS SCREEN", CONSOLECOLORPAIR_YELLOWBLACK, 0);
+                Console_Write(game->console, 23, 0, " PRESS ESC. TO CLOSE THIS SCREEN", CONSOLECOLORPAIR_YELLOWBLACK, 0);
                 return;
             }
 

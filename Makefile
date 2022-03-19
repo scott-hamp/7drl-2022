@@ -12,7 +12,7 @@ else
 endif
 
 ifeq ($(BUILD),linux)
-	CXXFLAGS = -std=c17 -w -DBUILDINDEX=0 -DRELEASE=${RELEASE}
+	CXXFLAGS = -std=c17 -g -w -DBUILDINDEX=0 -DRELEASE=${RELEASE}
 else
 	INCLUDELINK = -I$(WIN64)/include -L$(WIN64)/lib
 	CXXFLAGS = -std=c17 -w -DBUILDINDEX=1 -DRELEASE=${RELEASE} ${INCLUDELINK}
@@ -21,7 +21,7 @@ endif
 LDFLAGS = -lncursesw -lm
 
 PROJECTNAME = from-the-depths
-VERSION = 7drl
+VERSION = 001
 APPNAMESELF = $(PROJECTNAME)_v$(VERSION)
 
 ifeq ($(RELEASE),0)

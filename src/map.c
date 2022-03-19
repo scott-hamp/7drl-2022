@@ -278,7 +278,6 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
     MapObject *mapObject = MapObject_Create("none");
     mapObject->id = id;
     mapObject->view = NULL;
-    bool hasView = false;
 
     if(id == MAPOBJECTID_BILGERAT) // Bilge rat
     {
@@ -302,7 +301,6 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->turnTicksSize = 8;
         mapObject->wchr = L'r';
         mapObject->wchrAlt = L'r';
-        hasView = true;
     }
 
     if(id == MAPOBJECTID_PLAYER) // PLAYER
@@ -327,7 +325,6 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->turnTicksSize = 10;
         mapObject->wchr = L'@';
         mapObject->wchrAlt = L'@';
-        hasView = true;
     }
 
     if(id == MAPOBJECTID_DOOR) // Door
@@ -415,7 +412,6 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->turnTicksSize = 10;
         mapObject->wchr = L'd';
         mapObject->wchrAlt = L'd';
-        hasView = true;
     }
 
     if(id == MAPOBJECTID_SCUBAMASK) // Scuba mask
@@ -466,7 +462,6 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->turnTicksSize = 9;
         mapObject->wchr = L'e';
         mapObject->wchrAlt = L'e';
-        hasView = true;
     }
 
     if(id == MAPOBJECTID_TIGERFISH) // Tigerfish
@@ -489,7 +484,6 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->turnTicksSize = 12;
         mapObject->wchr = L'f';
         mapObject->wchrAlt = L'f';
-        hasView = true;
     }
 
     if(id == MAPOBJECTID_WATER) // Water
@@ -528,7 +522,7 @@ MapObject *Map_CreateObject(Map *map, uint16_t id)
         mapObject->wchrAlt = L'<';
     }
 
-    if(hasView)
+    if(mapObject->flags & MAPOBJECTFLAG_ISLIVING)
     {
         mapObject->view = malloc(sizeof(int) * (map->size.width * map->size.height));
 
@@ -1481,8 +1475,11 @@ void MapObject_Destroy(MapObject *mapObject)
             MapObjectAsItem_Destroy(mapObject->items[i]);
     }
 
-    if(mapObject->view != NULL)
-        free(mapObject->view);
+    if(mapObject->flags & MAPOBJECTFLAG_ISLIVING)
+    {
+        if(mapObject->view != NULL)
+            free(mapObject->view);
+    }
 
     free(mapObject);
 }
