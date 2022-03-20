@@ -43,9 +43,13 @@ endif
 EXT = .c
 SRCDIR = src
 OBJDIR = obj
-RESOURCES = resources.res
-# windres resources.rc -O coff -o resources.res
 
+ifeq ($(BUILD),linux)
+	RESOURCES = 
+else
+	RESOURCES = resources.res
+endif
+# windres resources.rc -O coff -o resources.res
 
 SRC = $(wildcard $(SRCDIR)/*$(EXT))
 OBJ = $(SRC:$(SRCDIR)/%$(EXT)=$(OBJDIR)/%.o)

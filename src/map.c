@@ -746,20 +746,13 @@ void Map_Generate(Map *map)
                         map->rooms[i]->size.height = 3 + rand() % 2;
                     }
                 }
-
-                while(map->rooms[i]->position.y + map->rooms[i]->size.width > map->size.width - 2)
-                    map->rooms[i]->size.width--;
-                while(map->rooms[i]->position.y + map->rooms[i]->size.height > map->size.height - 2)
-                    map->rooms[i]->size.height--;
-                if(map->rooms[i]->size.width < 3) map->rooms[i]->size.width = 3;
-                if(map->rooms[i]->size.height < 3) map->rooms[i]->size.height = 3;
             }
 
             bool toContinue = false;
             for(int i = 0; i < map->roomsCount; i++)
             {
                 Rect2D *room = map->rooms[i];
-                if(room->position.x < 3 || room->position.y < 3 || room->position.x + room->size.width >= map->size.width - 3 || room->position.y + room->size.height >= map->size.height - 3)
+                if(room->position.x < 2 || room->position.y < 2 || room->position.x + room->size.width >= map->size.width - 2 || room->position.y + room->size.height >= map->size.height - 2 || room->size.width < 3 || room->size.height < 3)
                 {
                     toContinue = true;
                     break;
